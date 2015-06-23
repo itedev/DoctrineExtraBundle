@@ -1,0 +1,27 @@
+{
+  "name": "ite/doctrine-extra-bundle",
+  "type": "symfony-bundle",
+  "description": "Add new features for Doctrine 2",
+  "keywords": ["symfony", "doctrine", "extra", "native query builder"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "c1tru55",
+      "email": "mr.c1tru55@gmail.com"
+    }
+  ],
+  "minimum-stability": "dev",
+  "require": {
+    "php": ">=5.3.2",
+    "symfony/symfony": "~2.3-dev"
+  },
+  "suggest": {
+    "ite/filtration-bundle": "dev-master"
+  },
+  "autoload": {
+    "psr-0": {
+      "ITE\\DoctrineExtraBundle": ""
+    }
+  },
+  "target-dir": "ITE/DoctrineExtraBundle"
+}
