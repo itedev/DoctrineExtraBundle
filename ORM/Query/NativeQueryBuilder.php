@@ -60,9 +60,9 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
-     * @return NativeQuery
+     * @return string
      */
-    public function getQuery()
+    public function getSQL()
     {
         $aliases = $this->_rsm->getAliases();
         if (!empty($aliases)) {
@@ -81,6 +81,14 @@ class NativeQueryBuilder extends QueryBuilder
             }
         }
 
+        return parent::getSQL();
+    }
+
+    /**
+     * @return NativeQuery
+     */
+    public function getQuery()
+    {
         $sql = $this->getSQL();
         $query = $this->_em->createNativeQuery($sql, $this->_rsm)
             ->setParameters($this->getParameters())
