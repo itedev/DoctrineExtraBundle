@@ -35,6 +35,17 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
+     * @param ResultSetMappingBuilder $rsm
+     * @return $this
+     */
+    public function setResultSetMappingBuilder(ResultSetMappingBuilder $rsm)
+    {
+        $this->_rsm = $rsm;
+
+        return $this;
+    }
+    
+    /**
      * @return array
      */
     public function getRootAliases()
@@ -50,7 +61,7 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
-     * @return mixed
+     * @return string
      */
     public function getRootAlias()
     {

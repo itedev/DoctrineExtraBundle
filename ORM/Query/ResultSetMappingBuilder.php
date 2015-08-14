@@ -78,7 +78,7 @@ class ResultSetMappingBuilder extends ResultSetMapping
         $platform      = $this->em->getConnection()->getDatabasePlatform();
 
         $discrColumn = $classMetadata->discriminatorColumn['name'];
-        $resultColumnName = $platform->getSQLResultCasing($discrColumn);
+        $resultColumnName = $platform->getSQLResultCasing($this->getColumnAlias($discrColumn));
 
         $this->setDiscriminatorColumn($parentAlias, $resultColumnName);
         $this->addMetaResult($parentAlias, $resultColumnName, $discrColumn);
