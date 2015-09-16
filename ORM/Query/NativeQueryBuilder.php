@@ -44,6 +44,14 @@ class NativeQueryBuilder extends QueryBuilder
 
         return $this;
     }
+
+    /**
+     * @return ResultSetMappingBuilder
+     */
+    public function getResultSetMappingBuilder()
+    {
+        return $this->_rsm;
+    }
     
     /**
      * @return array
