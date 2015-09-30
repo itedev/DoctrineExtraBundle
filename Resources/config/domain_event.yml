@@ -1,0 +1,7 @@
+parameters:
+    ite_doctrine_extra.doctrine.event_subscriber.domain_event.class:    ITE\DoctrineExtraBundle\EventListener\DomainEventSubscriber
+
+services:
+    ite_doctrine_extra.doctrine.event_subscriber.domain_event:
+        class: %ite_doctrine_extra.doctrine.event_subscriber.domain_event.class%
+        arguments: [ @event_dispatcher ]
