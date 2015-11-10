@@ -25,5 +25,6 @@ class ITEDoctrineExtraExtension extends Extension
         $loader = new Loader\YamlFileLoader($container, new FileLocator(__DIR__.'/../Resources/config'));
         $loader->load('services.yml');
         $loader->load('domain_event.yml');
+        $loader->load('cascade_event.yml');
     }
 }

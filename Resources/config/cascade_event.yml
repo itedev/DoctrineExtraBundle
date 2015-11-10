@@ -1,0 +1,32 @@
+parameters:
+    ite_doctrine_extra.doctrine.event_subscriber.cascade_event.class: ITE\DoctrineExtraBundle\EventListener\CascadeEventSubscriber
+    ite_doctrine_extra.cascade_event.property_path.resolver.class: ITE\DoctrineExtraBundle\CascadeEvent\PropertyPath\Resolver
+    ite_doctrine_extra.cascade_event.map.loader.class: ITE\DoctrineExtraBundle\CascadeEvent\Map\Loader\CascadeMapLoader
+    ite_doctrine_extra.cascade_event.map.class: ITE\DoctrineExtraBundle\CascadeEvent\Map\CascadeMap
+    ite_doctrine_extra.cache_warmer.cascade_map.class: ITE\DoctrineExtraBundle\CacheWarmer\CascadeMapWarmer
+
+services:
+    ite_doctrine_extra.cascade_event.map.loader:
+        class: %ite_doctrine_extra.cascade_event.map.loader.class%
+        arguments: [@doctrine.orm.entity_manager, @annotations.reader, %kernel.cache_dir%]
+
+    ite_doctrine_extra.cascade_event.map:
+        class: %ite_doctrine_extra.cascade_event.map.class%
+        arguments: [@ite_doctrine_extra.cascade_event.map.loader]
+
+    ite_doctrine_extra.cascade_event.property_path.resolver:
+        class: %ite_doctrine_extra.cascade_event.property_path.resolver.class%
+        arguments: [@doctrine.orm.entity_manager]
+
+    ite_doctrine_extra.doctrine.event_subscriber.cascade_event:
+        class: %ite_doctrine_extra.doctrine.event_subscriber.cascade_event.class%
+        tags:
+            - { name: doctrine.event_subscriber }
+        arguments:
+            - @service_container
+
+    ite_doctrine_extra.cache_warmer.cascade_map:
+        class: %ite_doctrine_extra.cache_warmer.cascade_map.class%
+        arguments: [@ite_doctrine_extra.cascade_event.map.loader]
+        tags:
+            - { name: kernel.cache_warmer }
