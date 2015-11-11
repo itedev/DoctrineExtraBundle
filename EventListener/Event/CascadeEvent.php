@@ -25,20 +25,20 @@ class CascadeEvent extends Event
     /**
      * @var object
      */
-    private $parentEntity;
+    private $targetEntity;
 
     /**
      * CascadeEvent constructor.
      *
      * @param string $eventName
      * @param object $entity
-     * @param object $parentEntity
+     * @param object $targetEntity
      */
-    public function __construct($eventName, $entity, $parentEntity)
+    public function __construct($eventName, $entity, $targetEntity)
     {
         $this->eventName    = $eventName;
         $this->entity       = $entity;
-        $this->parentEntity = $parentEntity;
+        $this->targetEntity = $targetEntity;
     }
 
     /**
@@ -62,12 +62,12 @@ class CascadeEvent extends Event
     }
 
     /**
-     * Get parentEntity
+     * Get targetEntity
      *
      * @return object
      */
-    public function getParentEntity()
+    public function getTargetEntity()
     {
-        return $this->parentEntity;
+        return $this->targetEntity;
     }
 }
