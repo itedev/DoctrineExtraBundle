@@ -25,12 +25,12 @@ class NativeQueryBuilder extends QueryBuilder
 
     /**
      * @param EntityManager $em
-     * @param ResultSetMappingBuilder $rsm
+     * @param ResultSetMappingBuilder|null $rsm
      */
-    public function __construct(EntityManager $em, ResultSetMappingBuilder $rsm)
+    public function __construct(EntityManager $em, ResultSetMappingBuilder $rsm = null)
     {
         $this->_em = $em;
-        $this->_rsm = $rsm;
+        $this->_rsm = $rsm ? : new ResultSetMappingBuilder($em);
         parent::__construct($this->_em->getConnection());
     }
 
