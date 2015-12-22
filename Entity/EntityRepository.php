@@ -28,6 +28,47 @@ class EntityRepository extends BaseEntityRepository
     private $sqlCounter = 0;
 
     /**
+     * @param QueryBuilder $qb
+     * @return int
+     */
+    public function countQueryBuilder(QueryBuilder $qb)
+    {
+        $countQb = clone $qb;
+        $rootAliases = $qb->getRootAliases();
+
+        return (int) $countQb
+            ->select($countQb->expr()->count($rootAliases[0]))
+            // Remove ordering for efficiency; it doesn't affect the count
+            ->resetDQLPart('orderBy')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * @param QueryBuilder $qb
+     * @param $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getSlicedResult(QueryBuilder $qb, $limit, $offset = 0)
+    {
+        $orderBy = $qb->getDQLPart('orderBy');
+        if (empty($orderBy)) {
+            $rootAliases = $qb->getRootAliases();
+            $identifierFieldNames = $this->_class->getIdentifierFieldNames();
+            foreach ($identifierFieldNames as $fieldName) {
+                $qb->addOrderBy($rootAliases[0].'.'.$fieldName);
+            }
+        }
+
+        return $qb
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * @param string $alias
      * @return ResultSetMappingBuilder
      */
