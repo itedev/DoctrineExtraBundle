@@ -45,6 +45,25 @@ class EntityRepository extends BaseEntityRepository
     }
 
     /**
+     * Count by criteria.
+     *
+     * @param array $criteria
+     * @return int
+     */
+    public function countBy($criteria = [])
+    {
+        $alias = $this->getAlias();
+        $qb = $this->createQueryBuilder($alias);
+
+        foreach ($criteria as $key => $item) {
+            $qb->andWhere(sprintf('%s.%s %s :%s', $alias, $key, is_array($item) ? 'IN' : '=', $key));
+            $qb->setParameter($key, $item);
+        }
+
+        return $this->countQueryBuilder($qb);
+    }
+
+    /**
      * @param QueryBuilder $qb
      * @param $limit
      * @param int $offset
