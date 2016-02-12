@@ -24,6 +24,11 @@ class ResultSetMappingBuilder extends ResultSetMapping
     protected $columnTableMap = [];
 
     /**
+     * @var array $columnAliasMap
+     */
+    protected $columnAliasMap = [];
+
+    /**
      * @var array $aliases
      */
     protected $aliases = [];
@@ -39,6 +44,33 @@ class ResultSetMappingBuilder extends ResultSetMapping
     public function __construct(EntityManager $em)
     {
         $this->em = $em;
+    }
+
+    /**
+     * @param string $columnAlias
+     * @param string $tableAlias
+     * @param string $columnName
+     */
+    public function addColumnAlias($columnAlias, $tableAlias, $columnName)
+    {
+        $this->columnTableMap[$columnAlias] = $tableAlias;
+        $this->columnAliasMap[$columnAlias] = $tableAlias . '.' . $columnName;
+    }
+
+    /**
+     * @param string $sql
+     * @param string $fullyQualifiedColumnName
+     * @return string
+     */
+    public function generatedColumnAlias($fullyQualifiedColumnName, $sql = null)
+    {
+        $sql = $sql ? : $fullyQualifiedColumnName;
+
+        if (false === $columnAlias = array_search($fullyQualifiedColumnName, $this->columnAliasMap)) {
+            return sprintf('%s AS %s', $sql, $fullyQualifiedColumnName);
+        }
+
+        return sprintf('%s AS %s', $sql, $columnAlias);
     }
 
     /**
@@ -82,7 +114,7 @@ class ResultSetMappingBuilder extends ResultSetMapping
 
         $this->setDiscriminatorColumn($parentAlias, $resultColumnName);
         $this->addMetaResult($parentAlias, $resultColumnName, $discrColumn);
-        $this->columnTableMap[$resultColumnName] = $alias;
+        $this->addColumnAlias($resultColumnName, $alias, $discrColumn);
 
         $this->addAllClassFields($class, $alias, $parentAlias);
 
@@ -165,7 +197,7 @@ class ResultSetMappingBuilder extends ResultSetMapping
             }
 
             $this->addFieldResult($dqlAlias, $columnAlias, $fieldName, $classMetadata->name);
-            $this->columnTableMap[$columnAlias] = $alias;
+            $this->addColumnAlias($columnAlias, $alias, $columnName);
         }
 
         foreach ($classMetadata->associationMappings as $associationMapping) {
@@ -187,7 +219,7 @@ class ResultSetMappingBuilder extends ResultSetMapping
                         $columnName,
                         (isset($associationMapping['id']) && $associationMapping['id'] === true)
                     );
-                    $this->columnTableMap[$columnAlias] = $alias;
+                    $this->addColumnAlias($columnAlias, $alias, $columnName);
                 }
             }
         }
