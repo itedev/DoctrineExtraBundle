@@ -104,7 +104,8 @@ class CascadeEventSubscriber implements EventSubscriber
                         $targetEntities = $propertyPathResolver->resolve(
                             $item->getEntity(),
                             $value['target_class'],
-                            $value['property_path']
+                            $value['property_path'],
+                            $value['reverse']
                         );
 
                         foreach ($targetEntities as $targetEntity) {

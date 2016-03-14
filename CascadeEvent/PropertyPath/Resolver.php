@@ -36,13 +36,14 @@ class Resolver
      * @param object $entity
      * @param string $className
      * @param string $propertyPath
+     * @param bool   $reverse
      *
      * @return array
      * @throws \Doctrine\ORM\Mapping\MappingException
      */
-    public function resolve($entity, $className, $propertyPath)
+    public function resolve($entity, $className, $propertyPath, $reverse = false)
     {
-        $queryNeeded = get_class($entity) === $className ? false : true;
+        $queryNeeded = get_class($entity) === $className ? false : ($reverse ? false : true);
         $accessor = PropertyAccess::createPropertyAccessor();
         $pp = new PropertyPath($propertyPath);
         $parts = $pp->getElements();
@@ -51,14 +52,20 @@ class Resolver
             throw new \RuntimeException(sprintf('The given property path "" is invalid or empty.', $propertyPath));
         }
 
-        $metadata = $this->em->getClassMetadata($className);
-        $repository = $this->em->getRepository($className);
+        if ($reverse) {
+            $metadata   = $this->em->getClassMetadata(get_class($entity));
+            $repository = $this->em->getRepository(get_class($entity));
+        } else {
+            $metadata   = $this->em->getClassMetadata($className);
+            $repository = $this->em->getRepository($className);
+        }
         $qb = $repository->createQueryBuilder('t0');
         $currentEntity = $entity;
         $key = 0;
 
         foreach ($parts as $key => $part) {
             $association = $metadata->getAssociationMapping($part);
+            $metadata = $this->em->getClassMetadata($association['targetEntity']);
 
             // we have no multiple fields, so, additional loading is not needed
             if (!$queryNeeded && ($association['type'] === ClassMetadataInfo::ONE_TO_ONE
@@ -78,7 +85,7 @@ class Resolver
         }
 
         $qb
-            ->where('t'.($key + 1).'=:entity')
+            ->where('t'.($reverse ? '0' : ($key + 1)).'=:entity')
             ->setParameter('entity', $entity);
 
         return $qb->getQuery()->getResult();
