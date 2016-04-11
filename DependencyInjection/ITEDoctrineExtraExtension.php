@@ -26,5 +26,6 @@ class ITEDoctrineExtraExtension extends Extension
         $loader->load('services.yml');
         $loader->load('domain_event.yml');
         $loader->load('cascade_event.yml');
+        $loader->load('dependency.yml');
     }
 }

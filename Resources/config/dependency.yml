@@ -1,0 +1,20 @@
+parameters:
+    ite_doctrine_extra.dependency_map_builder.class: ITE\DoctrineExtraBundle\Dependency\DependencyMapBuilder
+    ite_doctrine_extra.dependency_metadata_factory.class: ITE\DoctrineExtraBundle\Dependency\DependencyMetadataFactory
+    ite_doctrine_extra.cascade_remover.class: ITE\DoctrineExtraBundle\Dependency\CascadeRemover
+
+services:
+    ite_doctrine_extra.dependency_map_builder:
+        class: %ite_doctrine_extra.dependency_map_builder.class%
+        arguments: [ @doctrine ]
+
+    ite_doctrine_extra.dependency_metadata_factory:
+        class: %ite_doctrine_extra.dependency_metadata_factory.class%
+        arguments: [ @doctrine, @ite_doctrine_extra.dependency_map_builder ]
+
+    ite_doctrine_extra.cascade_remover:
+        class: %ite_doctrine_extra.cascade_remover.class%
+        arguments:
+            - @doctrine
+            - @ite_doctrine_extra.dependency_map_builder
+            - @ite_doctrine_extra.dependency_metadata_factory
