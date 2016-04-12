@@ -16,5 +16,6 @@ services:
         class: %ite_doctrine_extra.cascade_remover.class%
         arguments:
             - @doctrine
+            - @event_dispatcher
             - @ite_doctrine_extra.dependency_map_builder
             - @ite_doctrine_extra.dependency_metadata_factory

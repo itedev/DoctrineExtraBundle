@@ -6,7 +6,10 @@ use Doctrine\ORM\Mapping\ClassMetadata as DoctrineClassMetadata;
 use Doctrine\ORM\EntityManager;
 use ITE\Common\Util\ArrayUtils;
 use ITE\DoctrineExtraBundle\Dependency\Metadata\DependencyMetadata;
+use ITE\DoctrineExtraBundle\EventListener\Event\CascadeRemoveEvent;
+use ITE\DoctrineExtraBundle\EventListener\Event\CascadeRemoveEvents;
 use Symfony\Bridge\Doctrine\ManagerRegistry;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Class CascadeRemover
@@ -21,6 +24,11 @@ class CascadeRemover implements CascadeRemoverInterface
     protected $registry;
 
     /**
+     * @var EventDispatcherInterface $dispatcher
+     */
+    protected $dispatcher;
+
+    /**
      * @var DependencyMapBuilder $dependencyMapBuilder
      */
     protected $dependencyMapBuilder;
@@ -32,15 +40,18 @@ class CascadeRemover implements CascadeRemoverInterface
 
     /**
      * @param ManagerRegistry $registry
+     * @param EventDispatcherInterface $dispatcher
      * @param DependencyMapBuilder $dependencyMapBuilder
      * @param DependencyMetadataFactory $dependencyMetadataFactory
      */
     public function __construct(
         ManagerRegistry $registry,
+        EventDispatcherInterface $dispatcher,
         DependencyMapBuilder $dependencyMapBuilder,
         DependencyMetadataFactory $dependencyMetadataFactory
     ) {
         $this->registry = $registry;
+        $this->dispatcher = $dispatcher;
         $this->dependencyMapBuilder = $dependencyMapBuilder;
         $this->dependencyMetadataFactory = $dependencyMetadataFactory;
     }
@@ -58,27 +69,42 @@ class CascadeRemover implements CascadeRemoverInterface
         // get dependent entity identifiers
         $identifier = $doctrineClassMetadata->getIdentifierValues($entity);
         $identifiers = [$identifier];
-        $result = [
+        $oneToManyDependencies = [
             $class => $identifiers,
         ];
-        $this->addDependencyIdentifiersRecursive($manager, $doctrineClassMetadata, $identifiers, $result);
+        $this->addDependencyIdentifiersRecursive(
+            $manager,
+            $doctrineClassMetadata,
+            $identifiers,
+            $oneToManyDependencies
+        );
         $sortedDoctrineClassMetadatas = $this->dependencyMapBuilder->getSortedClassMetadatas($manager);
-        $sortedResult = $this->sortResult($sortedDoctrineClassMetadatas, $result);
+        $oneToManyDependencies = $this->sortOneToManyDependencies(
+            $sortedDoctrineClassMetadatas,
+            $oneToManyDependencies
+        );
         // get dependent many-to-many tables
-        $tables = $this->getDependencyManyToManyTables($sortedDoctrineClassMetadatas, $sortedResult);
+        $manyToManyTables = $this->getDependencyManyToManyTables(
+            $sortedDoctrineClassMetadatas,
+            $oneToManyDependencies
+        );
         // get unidirectional one-to-one entities
-        $oneToOneDependencies = $this->getOneToOneDependencies($manager, $sortedDoctrineClassMetadatas, $sortedResult);
+        $oneToOneDependencies = $this->getOneToOneDependencies(
+            $manager,
+            $sortedDoctrineClassMetadatas,
+            $oneToManyDependencies
+        );
 
         $manager->beginTransaction();
         try {
-            foreach ($tables as $table => $relatedClasses) {
-                $this->doRemoveManyToManyTable($manager, $table, $relatedClasses, $sortedResult);
+            foreach ($manyToManyTables as $manyToManyTable => $relatedClasses) {
+                $this->doRemoveManyToManyTable($manager, $manyToManyTable, $relatedClasses, $oneToManyDependencies);
             }
-            foreach ($sortedResult as $dependencyClass => $dependencyIdentifiers) {
-                $this->doRemoveManyToOneEntity($manager, $dependencyClass, $dependencyIdentifiers);
+            foreach ($oneToManyDependencies as $dependencyClass => $dependencyIdentifiers) {
+                $this->doRemoveOneToManyEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
             }
-            foreach ($oneToOneDependencies as $class => $identifiers) {
-                $this->doRemoveOneToOneEntity($manager, $class, $identifiers);
+            foreach ($oneToOneDependencies as $dependencyClass => $dependencyIdentifiers) {
+                $this->doRemoveOneToOneEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
             }
             $manager->commit();
 
@@ -94,13 +120,13 @@ class CascadeRemover implements CascadeRemoverInterface
      * @param EntityManager $manager
      * @param DoctrineClassMetadata $doctrineClassMetadata
      * @param array $identifiers
-     * @param array $result
+     * @param array $oneToManyDependencies
      */
     protected function addDependencyIdentifiersRecursive(
         EntityManager $manager,
         DoctrineClassMetadata $doctrineClassMetadata,
         array $identifiers,
-        array &$result = []
+        array &$oneToManyDependencies = []
     ) {
         $class = $doctrineClassMetadata->getName();
         $classMetadata = $this->dependencyMetadataFactory->getMetadataFor($class);
@@ -121,28 +147,28 @@ class CascadeRemover implements CascadeRemoverInterface
                 }
             );
 
-            if (!isset($result[$dependencyClass])) {
-                $result[$dependencyClass] = $dependencyIdentifiers;
+            if (!isset($oneToManyDependencies[$dependencyClass])) {
+                $oneToManyDependencies[$dependencyClass] = $dependencyIdentifiers;
                 if (!empty($dependencyIdentifiers)) {
                     $this->addDependencyIdentifiersRecursive(
                         $manager,
                         $dependencyDoctrineClassMetadata,
                         array_values($dependencyIdentifiers),
-                        $result
+                        $oneToManyDependencies
                     );
                 }
             } else {
-                $oldDependencyIdentifiers = $result[$dependencyClass];
-                $newDependencyIdentifiers = array_merge($result[$dependencyClass], $dependencyIdentifiers);
+                $oldDependencyIdentifiers = $oneToManyDependencies[$dependencyClass];
+                $newDependencyIdentifiers = array_merge($oneToManyDependencies[$dependencyClass], $dependencyIdentifiers);
                 $addedDependencyIdentifiers = array_diff_key($newDependencyIdentifiers, $oldDependencyIdentifiers);
 
-                $result[$dependencyClass] = $newDependencyIdentifiers;
+                $oneToManyDependencies[$dependencyClass] = $newDependencyIdentifiers;
                 if (!empty($addedDependencyIdentifiers)) {
                     $this->addDependencyIdentifiersRecursive(
                         $manager,
                         $dependencyDoctrineClassMetadata,
                         array_values($addedDependencyIdentifiers),
-                        $result
+                        $oneToManyDependencies
                     );
                 }
             }
@@ -204,29 +230,29 @@ class CascadeRemover implements CascadeRemoverInterface
 
     /**
      * @param array|DoctrineClassMetadata[] $sortedDoctrineClassMetadatas
-     * @param array $result
+     * @param array $oneToManyDependencies
      * @return array
      */
-    protected function sortResult(array $sortedDoctrineClassMetadatas, array $result)
+    protected function sortOneToManyDependencies(array $sortedDoctrineClassMetadatas, array $oneToManyDependencies)
     {
-        $sortedResult = [];
+        $sortedOneToManyDependencies = [];
         foreach ($sortedDoctrineClassMetadatas as $dependencyClass => $dependencyDoctrineClassMetadata) {
-            if (isset($result[$dependencyClass]) && !empty($result[$dependencyClass])) {
-                $sortedResult[$dependencyClass] = array_values($result[$dependencyClass]);
+            if (isset($oneToManyDependencies[$dependencyClass]) && !empty($oneToManyDependencies[$dependencyClass])) {
+                $sortedOneToManyDependencies[$dependencyClass] = array_values($oneToManyDependencies[$dependencyClass]);
             }
         }
 
-        return $sortedResult;
+        return $sortedOneToManyDependencies;
     }
 
     /**
      * @param array|DoctrineClassMetadata[] $sortedDoctrineClassMetadatas
-     * @param array $sortedResult
+     * @param array $oneToManyDependencies
      * @return array
      */
-    protected function getDependencyManyToManyTables(array $sortedDoctrineClassMetadatas, array $sortedResult)
+    protected function getDependencyManyToManyTables(array $sortedDoctrineClassMetadatas, array $oneToManyDependencies)
     {
-        $classes = array_keys($sortedResult);
+        $classes = array_keys($oneToManyDependencies);
         $tables = [];
         foreach ($sortedDoctrineClassMetadatas as $class => $doctrineClassMetadata) {
             foreach ($doctrineClassMetadata->associationMappings as $associationMapping) {
@@ -260,21 +286,21 @@ class CascadeRemover implements CascadeRemoverInterface
     /**
      * @param EntityManager $manager
      * @param array|DoctrineClassMetadata[] $sortedDoctrineClassMetadatas
-     * @param array $sortedResult
+     * @param array $oneToManyDependencies
      * @return array
      */
     protected function getOneToOneDependencies(
         EntityManager $manager,
         array $sortedDoctrineClassMetadatas,
-        array $sortedResult
+        array $oneToManyDependencies
     ) {
         $alias1 = 'o1';
         $alias2 = 'o2';
         $idsParameter = 'ids';
         $limit = 5000;
 
-        $result = [];
-        foreach ($sortedResult as $class => $identifiers) {
+        $oneToOneDependencies = [];
+        foreach ($oneToManyDependencies as $class => $identifiers) {
             $doctrineClassMetadata = $sortedDoctrineClassMetadatas[$class];
             foreach ($doctrineClassMetadata->associationMappings as $associationMapping) {
                 if ($associationMapping['isOwningSide']
@@ -282,7 +308,7 @@ class CascadeRemover implements CascadeRemoverInterface
                     && ($associationMapping['isCascadeRemove'] || $associationMapping['orphanRemoval'])) {
                     $targetClass = $associationMapping['targetEntity'];
 
-                    $identifiers = $sortedResult[$class];
+                    $identifiers = $oneToManyDependencies[$class];
 
                     $count = count($identifiers);
                     $targetIdentifiers = [];
@@ -312,77 +338,44 @@ class CascadeRemover implements CascadeRemoverInterface
                     if (empty($targetIdentifiers)) {
                         continue;
                     }
-                    if (!isset($result[$targetClass])) {
-                        $result[$targetClass] = [];
+                    if (!isset($oneToOneDependencies[$targetClass])) {
+                        $oneToOneDependencies[$targetClass] = [];
                     }
-                    $result[$targetClass] = array_merge($result[$targetClass], $targetIdentifiers);
+                    $oneToOneDependencies[$targetClass] = array_merge(
+                        $oneToOneDependencies[$targetClass],
+                        $targetIdentifiers
+                    );
                 }
             }
         }
 
-        $result = array_map(function (array $item) {
+        $oneToOneDependencies = array_map(function (array $item) {
             return array_values($item);
-        }, $result);
+        }, $oneToOneDependencies);
 
-        return $result;
-    }
-
-    /**
-     * @param EntityManager $manager
-     * @param string $class
-     * @param array $identifiers
-     * @return int
-     */
-    protected function doRemoveOneToOneEntity(
-        EntityManager $manager,
-        $class,
-        array $identifiers
-    ) {
-        $alias = 'o';
-        $idsParameter = 'ids';
-        $limit = 5000;
-
-        $qb = $manager->createQueryBuilder();
-        $qb
-            ->delete($class, $alias)
-            ->where($qb->expr()->in(
-                $alias . '.' . 'id',
-                ':' . $idsParameter
-            ))
-        ;
-
-        $removedCount = 0;
-        $count = count($identifiers);
-        for ($offset = 0; $offset < $count; $offset += $limit) {
-            $subIdentifiers = array_slice($identifiers, $offset, $limit);
-
-            $clonedQb = clone $qb;
-            $removedCount += $clonedQb
-                ->setParameter(':' . $idsParameter, $subIdentifiers)
-                ->getQuery()
-                ->execute()
-            ;
-        }
-
-        return $removedCount;
+        return $oneToOneDependencies;
     }
 
     /**
      * @param EntityManager $manager
      * @param $table
      * @param array $relatedClasses
-     * @param array $sortedResult
+     * @param array $oneToManyDependencies
      * @return int
      */
-    protected function doRemoveManyToManyTable(EntityManager $manager, $table, array $relatedClasses, array $sortedResult)
-    {
+    protected function doRemoveManyToManyTable(
+        EntityManager $manager,
+        $table,
+        array $relatedClasses,
+        array $oneToManyDependencies
+    ) {
         $limit = 5000;
         $qb = $manager->getConnection()->createQueryBuilder()
             ->delete($table);
 
         $removedCount = 0;
         foreach ($relatedClasses as $relatedClass => $columns) {
-            $identifiers = $sortedResult[$relatedClass];
+            $identifiers = $oneToManyDependencies[$relatedClass];
 
             $count = count($identifiers);
             for ($offset = 0; $offset < $count; $offset += $limit) {
@@ -410,11 +403,12 @@ class CascadeRemover implements CascadeRemoverInterface
 
     /**
      * @param EntityManager $manager
+     * @param object $rootEntity
      * @param string $class
      * @param array $identifiers
      * @return int
      */
-    protected function doRemoveManyToOneEntity(EntityManager $manager, $class, array $identifiers)
+    protected function doRemoveOneToManyEntity(EntityManager $manager, $rootEntity, $class, array $identifiers)
     {
         $alias = 'o';
         $idsParameter = 'ids';
@@ -426,6 +420,14 @@ class CascadeRemover implements CascadeRemoverInterface
                 ':' . $idsParameter
             ))
         ;
+
+        $event = new CascadeRemoveEvent(
+            $rootEntity,
+            $class,
+            $identifiers,
+            DoctrineClassMetadata::ONE_TO_MANY
+        );
+        $this->dispatcher->dispatch(CascadeRemoveEvents::PRE_ONE_TO_MANY_REMOVE, $event);
 
         $limit = 5000;
         $count = count($identifiers);
@@ -440,6 +442,60 @@ class CascadeRemover implements CascadeRemoverInterface
                 ->execute()
             ;
         }
+
+        $this->dispatcher->dispatch(CascadeRemoveEvents::POST_ONE_TO_MANY_REMOVE, $event);
+
+        return $removedCount;
+    }
+
+    /**
+     * @param EntityManager $manager
+     * @param object $rootEntity
+     * @param string $class
+     * @param array $identifiers
+     * @return int
+     */
+    protected function doRemoveOneToOneEntity(
+        EntityManager $manager,
+        $rootEntity,
+        $class,
+        array $identifiers
+    ) {
+        $alias = 'o';
+        $idsParameter = 'ids';
+        $limit = 5000;
+
+        $qb = $manager->createQueryBuilder();
+        $qb
+            ->delete($class, $alias)
+            ->where($qb->expr()->in(
+                $alias . '.' . 'id',
+                ':' . $idsParameter
+            ))
+        ;
+
+        $event = new CascadeRemoveEvent(
+            $rootEntity,
+            $class,
+            $identifiers,
+            DoctrineClassMetadata::ONE_TO_ONE
+        );
+        $this->dispatcher->dispatch(CascadeRemoveEvents::PRE_ONE_TO_ONE_REMOVE, $event);
+
+        $removedCount = 0;
+        $count = count($identifiers);
+        for ($offset = 0; $offset < $count; $offset += $limit) {
+            $subIdentifiers = array_slice($identifiers, $offset, $limit);
+
+            $clonedQb = clone $qb;
+            $removedCount += $clonedQb
+                ->setParameter(':' . $idsParameter, $subIdentifiers)
+                ->getQuery()
+                ->execute()
+            ;
+        }
+
+        $this->dispatcher->dispatch(CascadeRemoveEvents::POST_ONE_TO_ONE_REMOVE, $event);
 
         return $removedCount;
     }
