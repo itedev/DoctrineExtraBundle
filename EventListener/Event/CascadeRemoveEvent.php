@@ -2,6 +2,7 @@
 
 namespace ITE\DoctrineExtraBundle\EventListener\Event;
 
+use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Symfony\Component\EventDispatcher\Event;
 
@@ -13,19 +14,24 @@ use Symfony\Component\EventDispatcher\Event;
 class CascadeRemoveEvent extends Event
 {
     /**
+     * @var EntityManager $em
+     */
+    private $em;
+
+    /**
      * @var object $rootEntity
      */
     private $rootEntity;
 
     /**
-     * @var string $dependencyClass
+     * @var string $class
      */
-    private $dependencyClass;
+    private $class;
 
     /**
-     * @var array $dependencyIdentifiers
+     * @var array $identifiers
      */
-    private $dependencyIdentifiers = [];
+    private $identifiers = [];
 
     /**
      * @var int $associationType
@@ -33,17 +39,69 @@ class CascadeRemoveEvent extends Event
     private $associationType;
 
     /**
+     * @param EntityManager $em
      * @param object $rootEntity
-     * @param string $dependencyClass
-     * @param string $dependencyIdentifiers
+     * @param string $class
+     * @param string $identifiers
      * @param int $associationType
      */
-    public function __construct($rootEntity, $dependencyClass, $dependencyIdentifiers, $associationType)
+    public function __construct(EntityManager $em, $rootEntity, $class, $identifiers, $associationType)
     {
+        $this->em = $em;
         $this->rootEntity = $rootEntity;
-        $this->dependencyClass = $dependencyClass;
-        $this->dependencyIdentifiers = $dependencyIdentifiers;
+        $this->class = $class;
+        $this->identifiers = $identifiers;
         $this->associationType = $associationType;
+    }
+
+    /**
+     * Get entityManager
+     *
+     * @return EntityManager
+     */
+    public function getEntityManager()
+    {
+        return $this->em;
+    }
+
+    /**
+     * Get rootEntity
+     *
+     * @return object
+     */
+    public function getRootEntity()
+    {
+        return $this->rootEntity;
+    }
+
+    /**
+     * Get class
+     *
+     * @return string
+     */
+    public function getClass()
+    {
+        return $this->class;
+    }
+
+    /**
+     * Get identifiers
+     *
+     * @return array
+     */
+    public function getIdentifiers()
+    {
+        return $this->identifiers;
+    }
+
+    /**
+     * Get associationType
+     *
+     * @return int
+     */
+    public function getAssociationType()
+    {
+        return $this->associationType;
     }
 
     /**

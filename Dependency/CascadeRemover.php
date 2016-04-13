@@ -422,12 +422,13 @@ class CascadeRemover implements CascadeRemoverInterface
         ;
 
         $event = new CascadeRemoveEvent(
+            $manager,
             $rootEntity,
             $class,
             $identifiers,
             DoctrineClassMetadata::ONE_TO_MANY
         );
-        $this->dispatcher->dispatch(CascadeRemoveEvents::PRE_ONE_TO_MANY_REMOVE, $event);
+        $this->dispatcher->dispatch(CascadeRemoveEvents::PRE_REMOVE, $event);
 
         $limit = 5000;
         $count = count($identifiers);
@@ -443,7 +444,7 @@ class CascadeRemover implements CascadeRemoverInterface
             ;
         }
 
-        $this->dispatcher->dispatch(CascadeRemoveEvents::POST_ONE_TO_MANY_REMOVE, $event);
+        $this->dispatcher->dispatch(CascadeRemoveEvents::POST_REMOVE, $event);
 
         return $removedCount;
     }
@@ -475,12 +476,13 @@ class CascadeRemover implements CascadeRemoverInterface
         ;
 
         $event = new CascadeRemoveEvent(
+            $manager,
             $rootEntity,
             $class,
             $identifiers,
             DoctrineClassMetadata::ONE_TO_ONE
         );
-        $this->dispatcher->dispatch(CascadeRemoveEvents::PRE_ONE_TO_ONE_REMOVE, $event);
+        $this->dispatcher->dispatch(CascadeRemoveEvents::PRE_REMOVE, $event);
 
         $removedCount = 0;
         $count = count($identifiers);
@@ -495,7 +497,7 @@ class CascadeRemover implements CascadeRemoverInterface
             ;
         }
 
-        $this->dispatcher->dispatch(CascadeRemoveEvents::POST_ONE_TO_ONE_REMOVE, $event);
+        $this->dispatcher->dispatch(CascadeRemoveEvents::POST_REMOVE, $event);
 
         return $removedCount;
     }
