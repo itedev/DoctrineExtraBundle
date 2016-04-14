@@ -2,7 +2,7 @@
 
 namespace ITE\DoctrineExtraBundle\Dependency\Metadata;
 
-use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\ClassMetadata as DoctrineClassMetadata;
 use ITE\DoctrineExtraBundle\Dependency\Counter\EntityCounterInterface;
 
 /**
@@ -13,12 +13,12 @@ use ITE\DoctrineExtraBundle\Dependency\Counter\EntityCounterInterface;
 class DependencyMetadata
 {
     /**
-     * @var ClassMetadata $targetClassMetadata
+     * @var DoctrineClassMetadata $targetClassMetadata
      */
     protected $targetClassMetadata;
 
     /**
-     * @var ClassMetadata $classMetadata
+     * @var DoctrineClassMetadata $classMetadata
      */
     protected $classMetadata;
 
@@ -33,14 +33,14 @@ class DependencyMetadata
     protected $entityCounter;
 
     /**
-     * @param ClassMetadata $targetClassMetadata
-     * @param ClassMetadata $classMetadata
+     * @param DoctrineClassMetadata $targetClassMetadata
+     * @param DoctrineClassMetadata $classMetadata
      * @param array $associationNames
      * @param EntityCounterInterface $entityCounter
      */
     public function __construct(
-        ClassMetadata $targetClassMetadata,
-        ClassMetadata $classMetadata,
+        DoctrineClassMetadata $targetClassMetadata,
+        DoctrineClassMetadata $classMetadata,
         array $associationNames,
         EntityCounterInterface $entityCounter
     ) {
@@ -53,7 +53,7 @@ class DependencyMetadata
     /**
      * Get targetClassMetadata
      *
-     * @return ClassMetadata
+     * @return DoctrineClassMetadata
      */
     public function getTargetClassMetadata()
     {
@@ -63,7 +63,7 @@ class DependencyMetadata
     /**
      * Get classMetadata
      *
-     * @return ClassMetadata
+     * @return DoctrineClassMetadata
      */
     public function getClassMetadata()
     {
