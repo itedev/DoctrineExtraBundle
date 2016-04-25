@@ -74,6 +74,14 @@ class ResultSetMappingBuilder extends ResultSetMapping
     }
 
     /**
+     * @return array
+     */
+    public function getColumnAliasMap()
+    {
+        return $this->columnAliasMap;
+    }
+
+    /**
      * @param string $class
      * @param string $alias
      */
