@@ -116,6 +116,9 @@ class CascadeEventSubscriber implements EventSubscriber
                                 $targetEntity
                             );
                             $dispatcher->dispatch($cascadeEventName, $event);
+                            if (null !== $value['method']) {
+                                call_user_func([$targetEntity, $value['method']], $event);
+                            }
                         }
                     }
                 }

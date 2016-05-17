@@ -119,6 +119,7 @@ class CascadeMapLoader
                 }
                 $map['property_path'] = $annotation->propertyPath;
                 $map['reverse'] = $annotation->reverse;
+                $map['method'] = $annotation->method;
 
                 $refl = new \ReflectionClass($annotation);
                 $eventType = strtolower($refl->getShortName());

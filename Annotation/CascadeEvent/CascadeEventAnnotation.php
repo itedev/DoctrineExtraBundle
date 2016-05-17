@@ -20,4 +20,9 @@ class CascadeEventAnnotation
      * @var string
      */
     public $propertyPath;
+    
+    /**
+     * @var null|string
+     */
+    public $method = null;
 }
