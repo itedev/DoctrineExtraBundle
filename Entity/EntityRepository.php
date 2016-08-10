@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\QueryBuilder;
 use ITE\DoctrineExtraBundle\ORM\Query\NativeQueryBuilder;
 use ITE\DoctrineExtraBundle\ORM\Query\ResultSetMappingBuilder;
+use ITE\DoctrineExtraBundle\ORM\QueryBuilder as ExtendedQueryBuilder;
 
 /**
  * Class EntityRepository
@@ -119,11 +120,19 @@ class EntityRepository extends BaseEntityRepository
     }
 
     /**
-     * {@inheritdoc}
+     * @param string|null $alias
+     *
+     * @return ExtendedQueryBuilder
      */
     public function createQueryBuilder($alias = null)
     {
-        return parent::createQueryBuilder($alias ? : $this->getAlias());
+        $alias = null !== $alias ? $alias : $this->getAlias();
+
+        $qb = new ExtendedQueryBuilder($this->_em);
+        $qb->select($alias)
+            ->from($this->_entityName, $alias);
+
+        return $qb;
     }
 
     /**
