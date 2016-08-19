@@ -11,8 +11,7 @@ interface CascadeRemoverInterface
 {
     /**
      * @param object $entity
-     * @return bool
+     * @return void
      */
     public function remove($entity);
 }
-

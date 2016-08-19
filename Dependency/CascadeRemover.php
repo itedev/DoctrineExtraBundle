@@ -107,13 +107,11 @@ class CascadeRemover implements CascadeRemoverInterface
                 $this->doRemoveOneToOneEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
             }
             $manager->commit();
-
-            return true;
         } catch (\Exception $e) {
             $manager->rollback();
-        }
 
-        return false;
+            throw $e;
+        }
     }
 
     /**
