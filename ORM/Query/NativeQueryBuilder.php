@@ -90,7 +90,7 @@ class NativeQueryBuilder extends QueryBuilder
             $rx = sprintf('~((%s)\.\*)~', implode('|', $aliases));
             $rsm = $this->_rsm;
             foreach ($select as $i => $selectPart) {
-                $select[$i] = preg_replace_callback($rx, function(array $matches) use ($rsm) {
+                $select[$i] = preg_replace_callback($rx, function (array $matches) use ($rsm) {
                     return $rsm->generateEntitySelectClause($matches[2]);
                 }, $selectPart);
             }

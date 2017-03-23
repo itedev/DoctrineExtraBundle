@@ -29,14 +29,24 @@ class ResultSetMappingBuilder extends ResultSetMapping
     protected $columnAliasMap = [];
 
     /**
+     * @var array $tableAliasMap
+     */
+    protected $tableAliasMap = [];
+
+    /**
      * @var array $aliases
      */
     protected $aliases = [];
 
     /**
-     * @var int $sqlCounter
+     * @var int $columnAliasCounter
      */
-    private $sqlCounter = 0;
+    private $columnAliasCounter = 0;
+
+    /**
+     * @var int $tableAliasCounter
+     */
+    private $tableAliasCounter = 0;
 
     /**
      * @param EntityManager $em
@@ -55,6 +65,15 @@ class ResultSetMappingBuilder extends ResultSetMapping
     {
         $this->columnTableMap[$columnAlias] = $tableAlias;
         $this->columnAliasMap[$columnAlias] = $tableAlias . '.' . $columnName;
+    }
+
+    /**
+     * @param string $tableName
+     * @param string $tableAlias
+     */
+    public function addTableAlias($tableName, $tableAlias)
+    {
+        $this->tableAliasMap[$tableName] = $tableAlias;
     }
 
     /**
@@ -89,8 +108,6 @@ class ResultSetMappingBuilder extends ResultSetMapping
     {
         $this->addEntityResult($class, $alias);
         $this->addAllClassFields($class, $alias);
-
-        $this->aliases[$alias] = $alias;
     }
 
     /**
@@ -103,8 +120,6 @@ class ResultSetMappingBuilder extends ResultSetMapping
     {
         $this->addJoinedEntityResult($class, $alias, $parentAlias, $relation);
         $this->addAllClassFields($class, $alias);
-
-        $this->aliases[$alias] = $alias;
     }
 
     /**
@@ -117,16 +132,49 @@ class ResultSetMappingBuilder extends ResultSetMapping
         $classMetadata = $this->em->getClassMetadata($class);
         $platform      = $this->em->getConnection()->getDatabasePlatform();
 
-        $discrColumn = $classMetadata->discriminatorColumn['name'];
-        $resultColumnName = $platform->getSQLResultCasing($this->getColumnAlias($discrColumn));
+        $columnName = $classMetadata->discriminatorColumn['name'];
+        $columnAlias = $platform->getSQLResultCasing($this->getColumnAlias($columnName));
 
-        $this->setDiscriminatorColumn($parentAlias, $resultColumnName);
-        $this->addMetaResult($parentAlias, $resultColumnName, $discrColumn);
-        $this->addColumnAlias($resultColumnName, $alias, $discrColumn);
+        $this->setDiscriminatorColumn($parentAlias, $columnAlias);
+        $this->addMetaResult($parentAlias, $columnAlias, $columnName);
+        $this->addColumnAlias($columnAlias, $alias, $columnName);
 
         $this->addAllClassFields($class, $alias, $parentAlias);
+    }
 
-        $this->aliases[$alias] = $alias;
+    /**
+     * @param string $className
+     * @param string $tableAlias
+     * @param array $subTableAliases
+     */
+    public function addRootInheritedEntityFromClassMetadata($className, $tableAlias, array $subTableAliases = [])
+    {
+        $classMetadata = $this->em->getClassMetadata($className);
+        $platform = $this->em->getConnection()->getDatabasePlatform();
+
+        $this->addEntityResult($className, $tableAlias);
+        $this->addAllClassFields($className, $tableAlias);
+
+        // discriminator
+        $columnName = $classMetadata->discriminatorColumn['name'];
+        $columnAlias = $platform->getSQLResultCasing($this->getColumnAlias($columnName));
+
+        $this->setDiscriminatorColumn($tableAlias, $columnAlias);
+        $this->addMetaResult($tableAlias, $columnAlias, $columnName);
+        $this->addColumnAlias($columnAlias, $tableAlias, $columnName);
+
+        // sub-classes
+        foreach ($classMetadata->subClasses as $subClassName) {
+            $subClassMetadata = $this->em->getClassMetadata($subClassName);
+            $subTableName = $subClassMetadata->getTableName();
+
+            $subTableAlias = isset($subTableAliases[$subTableName])
+                ? $subTableAliases[$subTableName]
+                : $this->getTableAlias($subTableName);
+
+            $this->addTableAlias($subTableName, $subTableAlias);
+            $this->addAllClassFields($subClassName, $subTableAlias, $tableAlias);
+        }
     }
 
     /**
@@ -169,9 +217,9 @@ class ResultSetMappingBuilder extends ResultSetMapping
             if (isset($this->fieldMappings[$columnName])) {
                 $class = $this->em->getClassMetadata($this->declaringClasses[$columnName]);
                 $sql  .= $class->fieldMappings[$this->fieldMappings[$columnName]]['columnName'];
-            } else if (isset($this->metaMappings[$columnName])) {
+            } elseif (isset($this->metaMappings[$columnName])) {
                 $sql .= $this->metaMappings[$columnName];
-            } else if (isset($this->discriminatorColumns[$columnName])) {
+            } elseif (isset($this->discriminatorColumns[$columnName])) {
                 $sql .= $this->discriminatorColumns[$columnName];
             }
 
@@ -191,6 +239,8 @@ class ResultSetMappingBuilder extends ResultSetMapping
         $dqlAlias = $dqlAlias ? : $alias;
         $classMetadata = $this->em->getClassMetadata($class);
         $platform      = $this->em->getConnection()->getDatabasePlatform();
+
+        $this->aliases[$alias] = $alias;
 
         foreach ($classMetadata->fieldMappings as $fieldName => $mapping) {
             if (isset($mapping['inherited'])) {
@@ -239,6 +289,20 @@ class ResultSetMappingBuilder extends ResultSetMapping
      */
     protected function getColumnAlias($columnName)
     {
-        return $columnName . $this->sqlCounter++;
+        return $columnName . $this->columnAliasCounter++;
+    }
+
+    /**
+     * @param string $tableName
+     * @return string
+     */
+    protected function getTableAlias($tableName)
+    {
+        if (!isset($this->tableAliasMap[$tableName])) {
+            $this->tableAliasMap[$tableName] = strtolower(preg_replace('~(?<=[a-z]).~i', '', $tableName))
+                . $this->tableAliasCounter++;
+        }
+
+        return $this->tableAliasMap[$tableName];
     }
 }
