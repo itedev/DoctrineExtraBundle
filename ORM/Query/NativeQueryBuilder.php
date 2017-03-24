@@ -35,6 +35,14 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
+     * @return EntityManager
+     */
+    public function getEntityManager()
+    {
+        return $this->_em;
+    }
+
+    /**
      * @param ResultSetMappingBuilder $rsm
      * @return $this
      */
@@ -66,6 +74,24 @@ class NativeQueryBuilder extends QueryBuilder
         }
 
         return $rootAliases;
+    }
+
+    /**
+     * @return array
+     */
+    public function getRootEntities()
+    {
+        $rootAliases = $this->getRootAliases();
+        $aliasMap = $this->_rsm->getAliasMap();
+
+        $rootEntities = [];
+        foreach ($rootAliases as $rootAlias) {
+            if (isset($aliasMap[$rootAlias])) {
+                $rootEntities[] = $aliasMap[$rootAlias];
+            }
+        }
+
+        return $rootEntities;
     }
 
     /**
