@@ -105,12 +105,13 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
+     * @param bool $overrideSelect
      * @return string
      */
-    public function getSQL()
+    public function getSQL($overrideSelect = true)
     {
         $aliases = $this->_rsm->getAliases();
-        if (!empty($aliases)) {
+        if ($overrideSelect && !empty($aliases)) {
             // modify select
             $select = $this->getQueryPart('select');
             $rx = sprintf('~((%s)\.\*)~', implode('|', $aliases));
