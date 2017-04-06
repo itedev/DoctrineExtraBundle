@@ -96,7 +96,8 @@ class DependencyMetadataFactory implements DependencyMetadataFactoryInterface
     ) {
         $associationNames = [];
         foreach ($classMetadata->associationMappings as $associationMapping) {
-            if (!$associationMapping['isOwningSide']) {
+            if (!$associationMapping['isOwningSide']
+                || $associationMapping['type'] === DoctrineClassMetadata::MANY_TO_MANY) {
                 continue;
             }
 
