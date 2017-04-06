@@ -35,6 +35,14 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
+     * @return EntityManager
+     */
+    public function getEntityManager()
+    {
+        return $this->_em;
+    }
+
+    /**
      * @param ResultSetMappingBuilder $rsm
      * @return $this
      */
@@ -69,6 +77,24 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
+     * @return array
+     */
+    public function getRootEntities()
+    {
+        $rootAliases = $this->getRootAliases();
+        $aliasMap = $this->_rsm->getAliasMap();
+
+        $rootEntities = [];
+        foreach ($rootAliases as $rootAlias) {
+            if (isset($aliasMap[$rootAlias])) {
+                $rootEntities[] = $aliasMap[$rootAlias];
+            }
+        }
+
+        return $rootEntities;
+    }
+
+    /**
      * @return string
      */
     public function getRootAlias()
@@ -79,18 +105,19 @@ class NativeQueryBuilder extends QueryBuilder
     }
 
     /**
+     * @param bool $overrideSelect
      * @return string
      */
-    public function getSQL()
+    public function getSQL($overrideSelect = true)
     {
         $aliases = $this->_rsm->getAliases();
-        if (!empty($aliases)) {
+        if ($overrideSelect && !empty($aliases)) {
             // modify select
             $select = $this->getQueryPart('select');
             $rx = sprintf('~((%s)\.\*)~', implode('|', $aliases));
             $rsm = $this->_rsm;
             foreach ($select as $i => $selectPart) {
-                $select[$i] = preg_replace_callback($rx, function(array $matches) use ($rsm) {
+                $select[$i] = preg_replace_callback($rx, function (array $matches) use ($rsm) {
                     return $rsm->generateEntitySelectClause($matches[2]);
                 }, $selectPart);
             }
