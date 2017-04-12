@@ -2,7 +2,9 @@
 
 namespace ITE\DoctrineExtraBundle\DomainEvent;
 
-use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent;
+use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent;
+use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\FieldChangeDomainEvent;
+use ITE\DoctrineExtraBundle\Exception\UnexpectedTypeException;
 
 /**
  * Class DomainEventAwareTrait
@@ -12,27 +14,56 @@ use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent;
 trait DomainEventAwareTrait
 {
     /**
-     * @var array|DomainEvent[] $events
+     * @var array|DomainEvent[] $domainEvents
      */
-    private $events = [];
+    private $domainEvents = [];
 
     /**
-     * @return array|DomainEvent[]
+     * {@inheritdoc}
      */
-    public function popEvents()
+    public function popDomainEvents()
     {
-        $events = $this->events;
-        $this->events = [];
+        $domainEvents = $this->domainEvents;
+        $this->domainEvents = [];
 
-        return $events;
+        return $domainEvents;
     }
 
     /**
-     * @param $eventName
-     * @param array $payload
+     * {@inheritdoc}
      */
-    public function dispatch($eventName, array $payload = [])
+    public function dispatchDomainEvent($eventName, array $payload = [])
     {
-        $this->events[] = new DomainEvent($eventName, $payload);
+        switch (true) {
+            case is_string($eventName):
+                $domainEvent = new DomainEvent($eventName, $payload);
+                break;
+            case $eventName instanceof DomainEvent:
+                $domainEvent = $eventName;
+                break;
+            default:
+                throw new UnexpectedTypeException(
+                    $eventName,
+                    'ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent or string'
+                );
+        }
+
+        $this->domainEvents[] = $domainEvent;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function dispatchFieldChangeDomainEvent($eventName, $oldValue, $newValue)
+    {
+        if (!is_string($eventName)) {
+            throw new UnexpectedTypeException(
+                $eventName,
+                'string'
+            );
+        }
+
+        $domainEvent = new FieldChangeDomainEvent($eventName, $oldValue, $newValue);
+        $this->domainEvents[] = $domainEvent;
     }
 }

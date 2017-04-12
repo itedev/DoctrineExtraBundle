@@ -7,7 +7,7 @@ use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use ITE\DoctrineExtraBundle\DomainEvent\DomainEventAwareInterface;
-use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent;
+use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**

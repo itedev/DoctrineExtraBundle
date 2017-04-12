@@ -5,3 +5,5 @@ services:
     ite_doctrine_extra.doctrine.event_subscriber.domain_event:
         class: %ite_doctrine_extra.doctrine.event_subscriber.domain_event.class%
         arguments: [ @event_dispatcher ]
+        tags:
+            - { name: doctrine.event_subscriber }

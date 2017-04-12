@@ -5,8 +5,9 @@ namespace ITE\DoctrineExtraBundle\EventListener;
 use Doctrine\Common\EventSubscriber;
 use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
+use Doctrine\ORM\Event\PreUpdateEventArgs;
 use ITE\DoctrineExtraBundle\DomainEvent\DomainEventAwareInterface;
-use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent;
+use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
@@ -27,6 +28,11 @@ class DomainEventSubscriber implements EventSubscriber
     protected $entities = [];
 
     /**
+     * @var bool $enabled
+     */
+    protected $enabled = true;
+
+    /**
      * @param EventDispatcherInterface $dispatcher
      */
     public function __construct(EventDispatcherInterface $dispatcher)
@@ -35,11 +41,31 @@ class DomainEventSubscriber implements EventSubscriber
     }
 
     /**
+     * @return $this
+     */
+    public function enable()
+    {
+        $this->enabled = true;
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function disable()
+    {
+        $this->enabled = false;
+
+        return $this;
+    }
+
+    /**
      * @param LifecycleEventArgs $event
      */
     public function postLoad(LifecycleEventArgs $event)
     {
-        $this->storeEntity($event);
+        $this->scheduleEntity($event);
     }
 
     /**
@@ -47,15 +73,23 @@ class DomainEventSubscriber implements EventSubscriber
      */
     public function postPersist(LifecycleEventArgs $event)
     {
-        $this->storeEntity($event);
+        $this->scheduleEntity($event);
     }
+
+    ///**
+    // * @param PreUpdateEventArgs $event
+    // */
+    //public function preUpdate(PreUpdateEventArgs $event)
+    //{
+    //    $this->scheduleEntity($event);
+    //}
 
     /**
      * @param LifecycleEventArgs $event
      */
     public function postUpdate(LifecycleEventArgs $event)
     {
-        $this->storeEntity($event);
+        $this->scheduleEntity($event);
     }
 
     /**
@@ -63,7 +97,7 @@ class DomainEventSubscriber implements EventSubscriber
      */
     public function postRemove(LifecycleEventArgs $event)
     {
-        $this->storeEntity($event);
+        $this->scheduleEntity($event);
     }
 
     /**
@@ -72,9 +106,9 @@ class DomainEventSubscriber implements EventSubscriber
     public function postFlush(PostFlushEventArgs $event)
     {
         foreach ($this->popEntities() as $entity) {
-            foreach ($entity->popEvents() as $event) {
+            foreach ($entity->popDomainEvents() as $event) {
                 /** @var DomainEvent $event */
-                $event->setSubject($entity);
+                $event->setEntity($entity);
                 $this->dispatcher->dispatch($event->getEventName(), $event);
             }
         }
@@ -94,14 +128,15 @@ class DomainEventSubscriber implements EventSubscriber
     /**
      * @param LifecycleEventArgs $event
      */
-    protected function storeEntity(LifecycleEventArgs $event)
+    protected function scheduleEntity(LifecycleEventArgs $event)
     {
         $entity = $event->getEntity();
-        if (!$entity instanceof DomainEventAwareInterface || in_array($entity, $this->entities, true)) {
+        if (!$entity instanceof DomainEventAwareInterface) {
             return;
         }
 
-        $this->entities[] = $entity;
+        $hash = spl_object_hash($entity);
+        $this->entities[$hash] = $entity;
     }
 
     /**
@@ -112,6 +147,7 @@ class DomainEventSubscriber implements EventSubscriber
         return [
             'postLoad',
             'postPersist',
+            //'preUpdate',
             'postUpdate',
             'postRemove',
             'postFlush',
