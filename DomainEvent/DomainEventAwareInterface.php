@@ -2,7 +2,7 @@
 
 namespace ITE\DoctrineExtraBundle\DomainEvent;
 
-use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent;
+use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEventInterface;
 
 /**
  * Interface DomainEventAwareInterface
@@ -12,13 +12,14 @@ use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent;
 interface DomainEventAwareInterface
 {
     /**
-     * @return array|DomainEvent[]
+     * @return array|DomainEventInterface[]
      */
     public function popDomainEvents();
-    
+
     /**
-     * @param string|DomainEvent $eventName
+     * @param string|DomainEventInterface $eventName
      * @param array $payload
+     * @param bool $grouped
      */
-    public function dispatchDomainEvent($eventName, array $payload = []);
+    public function dispatchDomainEvent($eventName, array $payload = [], $grouped = false);
 }

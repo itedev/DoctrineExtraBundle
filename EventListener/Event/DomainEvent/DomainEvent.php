@@ -2,27 +2,15 @@
 
 namespace ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent;
 
-use ITE\DoctrineExtraBundle\DomainEvent\DomainEventAwareInterface;
 use ITE\DoctrineExtraBundle\Exception\InvalidArgumentException;
-use Symfony\Component\EventDispatcher\Event;
 
 /**
  * Class DomainEvent
  *
  * @author c1tru55 <mr.c1tru55@gmail.com>
  */
-class DomainEvent extends Event
+class DomainEvent extends AbstractDomainEvent
 {
-    /**
-     * @var string $eventName
-     */
-    private $eventName;
-
-    /**
-     * @var DomainEventAwareInterface $entity
-     */
-    private $entity;
-
     /**
      * @var array $data
      */
@@ -31,38 +19,12 @@ class DomainEvent extends Event
     /**
      * @param string $eventName
      * @param array $data
+     * @param bool $grouped
      */
-    public function __construct($eventName, array $data = [])
+    public function __construct($eventName, array $data = [], $grouped = false)
     {
-        $this->eventName = $eventName;
+        parent::__construct($eventName, $grouped);
         $this->data = $data;
-    }
-
-    /**
-     * @return string
-     */
-    public function getEventName()
-    {
-        return $this->eventName;
-    }
-
-    /**
-     * @return DomainEventAwareInterface
-     */
-    public function getEntity()
-    {
-        return $this->entity;
-    }
-
-    /**
-     * @param DomainEventAwareInterface $entity
-     * @return $this
-     */
-    public function setEntity(DomainEventAwareInterface $entity)
-    {
-        $this->entity = $entity;
-
-        return $this;
     }
 
     /**

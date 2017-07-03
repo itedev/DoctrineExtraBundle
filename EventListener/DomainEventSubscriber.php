@@ -7,6 +7,7 @@ use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\PostFlushEventArgs;
 use Doctrine\ORM\Event\PreUpdateEventArgs;
 use ITE\DoctrineExtraBundle\DomainEvent\DomainEventAwareInterface;
+use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\BatchDomainEvent;
 use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
@@ -106,10 +107,34 @@ class DomainEventSubscriber implements EventSubscriber
     public function postFlush(PostFlushEventArgs $event)
     {
         foreach ($this->popEntities() as $entity) {
+            /** @var BatchDomainEvent|null $batchEvent */
+            $batchEvent = null;
             foreach ($entity->popDomainEvents() as $event) {
                 /** @var DomainEvent $event */
                 $event->setEntity($entity);
-                $this->dispatcher->dispatch($event->getEventName(), $event);
+
+                if ($event->isGrouped()) {
+                    if (null === $batchEvent) {
+                        $batchEvent = new BatchDomainEvent($event->getEventName());
+                    }
+                    if ($event->getEventName() === $batchEvent->getEventName()) {
+                        $batchEvent->addEvent($event);
+                    } else {
+                        $this->dispatcher->dispatch($batchEvent->getEventName(), $batchEvent);
+                        $batchEvent = new BatchDomainEvent($event->getEventName());
+                        $batchEvent->addEvent($event);
+                    }
+                } else {
+                    if (null !== $batchEvent) {
+                        $this->dispatcher->dispatch($batchEvent->getEventName(), $batchEvent);
+                        $batchEvent = null;
+                    }
+                    $this->dispatcher->dispatch($event->getEventName(), $event);
+                }
+            }
+            if (null !== $batchEvent) {
+                $this->dispatcher->dispatch($batchEvent->getEventName(), $batchEvent);
+                $batchEvent = null;
             }
         }
     }

@@ -3,6 +3,7 @@
 namespace ITE\DoctrineExtraBundle\DomainEvent;
 
 use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent;
+use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEventInterface;
 use ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\FieldChangeDomainEvent;
 use ITE\DoctrineExtraBundle\Exception\UnexpectedTypeException;
 
@@ -14,7 +15,7 @@ use ITE\DoctrineExtraBundle\Exception\UnexpectedTypeException;
 trait DomainEventAwareTrait
 {
     /**
-     * @var array|DomainEvent[] $domainEvents
+     * @var array|DomainEventInterface[] $domainEvents
      */
     private $domainEvents = [];
 
@@ -32,19 +33,19 @@ trait DomainEventAwareTrait
     /**
      * {@inheritdoc}
      */
-    public function dispatchDomainEvent($eventName, array $payload = [])
+    public function dispatchDomainEvent($eventName, array $payload = [], $grouped = false)
     {
         switch (true) {
             case is_string($eventName):
-                $domainEvent = new DomainEvent($eventName, $payload);
+                $domainEvent = new DomainEvent($eventName, $payload, $grouped);
                 break;
-            case $eventName instanceof DomainEvent:
+            case $eventName instanceof DomainEventInterface:
                 $domainEvent = $eventName;
                 break;
             default:
                 throw new UnexpectedTypeException(
                     $eventName,
-                    'ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEvent or string'
+                    'ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent\DomainEventInterface or string'
                 );
         }
 
