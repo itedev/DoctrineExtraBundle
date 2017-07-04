@@ -116,12 +116,14 @@ class DomainEventSubscriber implements EventSubscriber
                 if ($event->isGrouped()) {
                     if (null === $batchEvent) {
                         $batchEvent = new BatchDomainEvent($event->getEventName());
+                        $batchEvent->setEntity($entity);
                     }
                     if ($event->getEventName() === $batchEvent->getEventName()) {
                         $batchEvent->addEvent($event);
                     } else {
                         $this->dispatcher->dispatch($batchEvent->getEventName(), $batchEvent);
                         $batchEvent = new BatchDomainEvent($event->getEventName());
+                        $batchEvent->setEntity($entity);
                         $batchEvent->addEvent($event);
                     }
                 } else {

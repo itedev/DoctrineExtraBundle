@@ -2,6 +2,7 @@
 
 namespace ITE\DoctrineExtraBundle\EventListener\Event\DomainEvent;
 
+use ArrayIterator;
 use ITE\DoctrineExtraBundle\Exception\InvalidArgumentException;
 use ITE\DoctrineExtraBundle\Exception\UnexpectedTypeException;
 
@@ -10,7 +11,7 @@ use ITE\DoctrineExtraBundle\Exception\UnexpectedTypeException;
  *
  * @author c1tru55 <mr.c1tru55@gmail.com>
  */
-class BatchDomainEvent extends AbstractDomainEvent
+class BatchDomainEvent extends AbstractDomainEvent implements \ArrayAccess, \Countable, \IteratorAggregate
 {
     /**
      * @var array|DomainEvent[] $events
@@ -57,5 +58,54 @@ class BatchDomainEvent extends AbstractDomainEvent
     public function getEvents()
     {
         return $this->events;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getIterator()
+    {
+        return new ArrayIterator($this->events);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function offsetExists($index)
+    {
+        return array_key_exists($index, $this->events);
+    }
+
+    /**
+     * @param int $index
+     * @return DomainEvent
+     */
+    public function offsetGet($index)
+    {
+        return $this->events[$index];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function offsetSet($rowIndex, $value)
+    {
+        throw new \Exception();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function offsetUnset($index)
+    {
+        unset($this->events[$index]);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function count()
+    {
+        return count($this->events);
     }
 }
