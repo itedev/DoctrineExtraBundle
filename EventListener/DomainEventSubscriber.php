@@ -166,6 +166,11 @@ class DomainEventSubscriber implements EventSubscriber
         $this->entities[$hash] = $entity;
     }
 
+    public function onClear()
+    {
+        $this->popEntities();
+    }
+
     /**
      * {@inheritdoc}
      */
@@ -174,7 +179,7 @@ class DomainEventSubscriber implements EventSubscriber
         return [
             'postLoad',
             'postPersist',
-            //'preUpdate',
+            'onClear',
             'postUpdate',
             'postRemove',
             'postFlush',
