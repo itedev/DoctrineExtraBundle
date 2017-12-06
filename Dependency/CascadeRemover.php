@@ -97,8 +97,8 @@ class CascadeRemover implements CascadeRemoverInterface
 
         $manager->beginTransaction();
         try {
-            foreach ($manyToManyTables as $manyToManyTable => $relatedClasses) {
-                $this->doRemoveManyToManyTable($manager, $manyToManyTable, $relatedClasses, $oneToManyDependencies);
+            foreach ($manyToManyTables as $manyToManyTable => $manyToManyTableData) {
+                $this->doRemoveManyToManyTable($manager, $manyToManyTable, $manyToManyTableData['classes'], $oneToManyDependencies);
             }
             foreach ($oneToManyDependencies as $dependencyClass => $dependencyIdentifiers) {
                 $this->doRemoveOneToManyEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
@@ -265,13 +265,16 @@ class CascadeRemover implements CascadeRemoverInterface
                         $table = $associationMapping['joinTable']['name'];
 
                         if (!isset($tables[$table])) {
-                            $tables[$table] = [];
+                            $tables[$table] = [
+                                'mapping' => $associationMapping,
+                                'classes' => [],
+                            ];
                         }
                         if ($hasClass) {
-                            $tables[$table][$class] = $associationMapping['relationToSourceKeyColumns'];
+                            $tables[$table]['classes'][$class] = $associationMapping['relationToSourceKeyColumns'];
                         }
                         if ($hasTargetClass) {
-                            $tables[$table][$targetClass] = $associationMapping['relationToTargetKeyColumns'];
+                            $tables[$table]['classes'][$targetClass] = $associationMapping['relationToTargetKeyColumns'];
                         }
                     }
                 }
