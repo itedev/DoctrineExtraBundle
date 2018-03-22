@@ -27,5 +27,13 @@ class ITEDoctrineExtraExtension extends Extension
         $loader->load('domain_event.yml');
         $loader->load('cascade_event.yml');
         $loader->load('dependency.yml');
+
+        $container->setParameter('ite_doctrine_extra.proxy_entity_manager.enabled', $config['proxy_entity_manager']['enabled']);
+
+        if (true === $config['proxy_entity_manager']['enabled']) {
+            $loader->load('proxy.yml');
+            $container->setParameter('ite_doctrine_extra.proxy_entity_manager.prefix_interceptors', $config['proxy_entity_manager']['prefix_interceptors']);
+            $container->setParameter('ite_doctrine_extra.proxy_entity_manager.suffix_interceptors', $config['proxy_entity_manager']['suffix_interceptors']);
+        }
     }
 }

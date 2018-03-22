@@ -20,6 +20,23 @@ class Configuration implements ConfigurationInterface
         $treeBuilder = new TreeBuilder();
         $rootNode = $treeBuilder->root('ite_doctrine_extra');
 
+        $rootNode
+            ->children()
+                ->arrayNode('proxy_entity_manager')
+                    ->canBeEnabled()
+                    ->children()
+                        ->variableNode('prefix_interceptors')
+                            ->defaultValue([])
+                        ->end()
+                    ->end()
+                    ->children()
+                        ->variableNode('suffix_interceptors')
+                            ->defaultValue([])
+                        ->end()
+                    ->end()
+                ->end()
+        ;
+
         // Here you should define the parameters that are allowed to
         // configure your bundle. See the documentation linked above for
         // more information on that topic.
