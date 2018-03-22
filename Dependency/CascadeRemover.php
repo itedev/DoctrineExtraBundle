@@ -64,6 +64,41 @@ class CascadeRemover implements CascadeRemoverInterface
         $class = get_class($entity);
         /** @var EntityManager $manager */
         $manager = $this->registry->getManagerForClass($class);
+
+        $dependencies = $this->getDependencies($entity);
+        $oneToManyDependencies = $dependencies['one-to-many'];
+        $manyToManyTables = $dependencies['many-to-many'];
+        $oneToOneDependencies = $dependencies['one-to-one'];
+
+        $manager->beginTransaction();
+        try {
+            foreach ($manyToManyTables as $manyToManyTable => $manyToManyTableData) {
+                $this->doRemoveManyToManyTable($manager, $manyToManyTable, $manyToManyTableData['classes'], $oneToManyDependencies);
+            }
+            foreach ($oneToManyDependencies as $dependencyClass => $dependencyIdentifiers) {
+                $this->doRemoveOneToManyEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
+            }
+            foreach ($oneToOneDependencies as $dependencyClass => $dependencyIdentifiers) {
+                $this->doRemoveOneToOneEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
+            }
+            $manager->commit();
+        } catch (\Exception $e) {
+            $manager->rollback();
+
+            throw $e;
+        }
+    }
+
+    /**
+     * @param object $entity
+     *
+     * @return array
+     */
+    public function getDependencies($entity)
+    {
+        $class = get_class($entity);
+        /** @var EntityManager $manager */
+        $manager = $this->registry->getManagerForClass($class);
         $doctrineClassMetadata = $manager->getClassMetadata($class);
 
         // get dependent entity identifiers
@@ -95,23 +130,11 @@ class CascadeRemover implements CascadeRemoverInterface
             $oneToManyDependencies
         );
 
-        $manager->beginTransaction();
-        try {
-            foreach ($manyToManyTables as $manyToManyTable => $manyToManyTableData) {
-                $this->doRemoveManyToManyTable($manager, $manyToManyTable, $manyToManyTableData['classes'], $oneToManyDependencies);
-            }
-            foreach ($oneToManyDependencies as $dependencyClass => $dependencyIdentifiers) {
-                $this->doRemoveOneToManyEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
-            }
-            foreach ($oneToOneDependencies as $dependencyClass => $dependencyIdentifiers) {
-                $this->doRemoveOneToOneEntity($manager, $entity, $dependencyClass, $dependencyIdentifiers);
-            }
-            $manager->commit();
-        } catch (\Exception $e) {
-            $manager->rollback();
-
-            throw $e;
-        }
+        return [
+            'one-to-many' => $oneToManyDependencies,
+            'many-to-many' => $manyToManyTables,
+            'one-to-one' => $oneToOneDependencies,
+        ];
     }
 
     /**
