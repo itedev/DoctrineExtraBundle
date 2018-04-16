@@ -14,6 +14,16 @@ use Symfony\Component\Filesystem\Filesystem;
 class ProxyFactory extends AccessInterceptorValueHolderFactory
 {
     /**
+     * @var Filesystem $fs
+     */
+    private $fs;
+
+    /**
+     * @var string $proxyDir
+     */
+    private $proxyDir;
+
+    /**
      * @param string $proxyDir
      */
     public function __construct(Filesystem $fs, $proxyDir)

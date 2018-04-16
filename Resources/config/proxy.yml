@@ -1,13 +1,21 @@
 parameters:
-    ite_doctrine_extra.proxy_dir: %kernel.cache_dir%/ite_doctrine_extra/proxy
+    ite_doctrine_extra.proxy_dir: ite_doctrine_extra/proxy
+    ite_doctrine_extra.proxy_dir_path: %kernel.cache_dir%/%ite_doctrine_extra.proxy_dir%
     ite_doctrine_extra.proxy_factory.class: ITE\DoctrineExtraBundle\Proxy\ProxyFactory
     ite_doctrine_extra.interceptor_method_factory.class: ITE\DoctrineExtraBundle\Proxy\InterceptorMethodFactory
+    ite_doctrine_extra.cache_warmer.proxy.class: ITE\DoctrineExtraBundle\CacheWarmer\ProxyWarmer
 
 services:
     ite_doctrine_extra.proxy_factory:
         class: %ite_doctrine_extra.proxy_factory.class%
-        arguments: [ @filesystem, %ite_doctrine_extra.proxy_dir% ]
+        arguments: [ @filesystem, %ite_doctrine_extra.proxy_dir_path% ]
 
     ite_doctrine_extra.interceptor_method_factory:
         class: %ite_doctrine_extra.interceptor_method_factory.class%
         arguments: [ @service_container ]
+
+    ite_doctrine_extra.cache_warmer.proxy:
+        class: %ite_doctrine_extra.cache_warmer.proxy.class%
+        arguments: [@ite_doctrine_extra.proxy_factory, %ite_doctrine_extra.proxy_dir%]
+        tags:
+            - { name: kernel.cache_warmer }
