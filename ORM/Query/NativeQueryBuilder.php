@@ -110,20 +110,22 @@ class NativeQueryBuilder extends QueryBuilder
      */
     public function getSQL($overrideSelect = true)
     {
-        $aliases = $this->_rsm->getAliases();
-        if ($overrideSelect && !empty($aliases)) {
-            // modify select
-            $select = $this->getQueryPart('select');
-            $rx = sprintf('~((%s)\.\*)~', implode('|', $aliases));
-            $rsm = $this->_rsm;
-            foreach ($select as $i => $selectPart) {
-                $select[$i] = preg_replace_callback($rx, function (array $matches) use ($rsm) {
-                    return $rsm->generateEntitySelectClause($matches[2]);
-                }, $selectPart);
-            }
-            $this->resetQueryPart('select');
-            foreach ($select as $selectPart) {
-                $this->addSelect($selectPart);
+        if (self::SELECT === $this->getType()) {
+            $aliases = $this->_rsm->getAliases();
+            if ($overrideSelect && !empty($aliases)) {
+                // modify select
+                $select = $this->getQueryPart('select');
+                $rx = sprintf('~((%s)\.\*)~', implode('|', $aliases));
+                $rsm = $this->_rsm;
+                foreach ($select as $i => $selectPart) {
+                    $select[$i] = preg_replace_callback($rx, function (array $matches) use ($rsm) {
+                        return $rsm->generateEntitySelectClause($matches[2]);
+                    }, $selectPart);
+                }
+                $this->resetQueryPart('select');
+                foreach ($select as $selectPart) {
+                    $this->addSelect($selectPart);
+                }
             }
         }
 
