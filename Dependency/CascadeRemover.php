@@ -2,6 +2,7 @@
 
 namespace ITE\DoctrineExtraBundle\Dependency;
 
+use Doctrine\Common\Util\ClassUtils;
 use Doctrine\ORM\Mapping\ClassMetadata as DoctrineClassMetadata;
 use Doctrine\ORM\EntityManager;
 use ITE\Common\Util\ArrayUtils;
@@ -10,6 +11,7 @@ use ITE\DoctrineExtraBundle\EventListener\Event\CascadeRemoveEvent;
 use ITE\DoctrineExtraBundle\EventListener\Event\CascadeRemoveEvents;
 use Symfony\Bridge\Doctrine\ManagerRegistry;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
  * Class CascadeRemover
@@ -91,27 +93,32 @@ class CascadeRemover implements CascadeRemoverInterface
 
     /**
      * @param object $entity
-     *
+     * @param array $options
      * @return array
      */
-    public function getDependencies($entity)
+    public function getDependencies($entity, array $options = [])
     {
-        $class = get_class($entity);
+        $options = $this->resolveOptions($options);
+
+        $class = ClassUtils::getRealClass(get_class($entity));
         /** @var EntityManager $manager */
         $manager = $this->registry->getManagerForClass($class);
         $doctrineClassMetadata = $manager->getClassMetadata($class);
 
         // get dependent entity identifiers
         $identifier = $doctrineClassMetadata->getIdentifierValues($entity);
-        $identifiers = [$identifier];
+        $identifiers = [
+            serialize($identifier) => $identifier,
+        ];
         $oneToManyDependencies = [
             $class => $identifiers,
         ];
         $this->addDependencyIdentifiersRecursive(
             $manager,
             $doctrineClassMetadata,
-            $identifiers,
-            $oneToManyDependencies
+            array_values($identifiers),
+            $oneToManyDependencies,
+            $options
         );
         $sortedDoctrineClassMetadatas = $this->dependencyMapBuilder->getSortedClassMetadatas($manager);
         $oneToManyDependencies = $this->sortOneToManyDependencies(
@@ -138,16 +145,43 @@ class CascadeRemover implements CascadeRemoverInterface
     }
 
     /**
+     * @param OptionsResolver $resolver
+     */
+    protected function configureOptions(OptionsResolver $resolver)
+    {
+        $resolver->setDefaults([
+            'excluded_classes' => [],
+        ]);
+        $resolver->setAllowedTypes([
+            'excluded_classes' => 'array',
+        ]);
+    }
+
+    /**
+     * @param array $options
+     * @return array
+     */
+    protected function resolveOptions(array $options)
+    {
+        $resolver = new OptionsResolver();
+        $this->configureOptions($resolver);
+
+        return $resolver->resolve($options);
+    }
+
+    /**
      * @param EntityManager $manager
      * @param DoctrineClassMetadata $doctrineClassMetadata
      * @param array $identifiers
      * @param array $oneToManyDependencies
+     * @param array $options
      */
     protected function addDependencyIdentifiersRecursive(
         EntityManager $manager,
         DoctrineClassMetadata $doctrineClassMetadata,
         array $identifiers,
-        array &$oneToManyDependencies = []
+        array &$oneToManyDependencies = [],
+        array $options = []
     ) {
         $class = $doctrineClassMetadata->getName();
         $classMetadata = $this->dependencyMetadataFactory->getMetadataFor($class);
@@ -155,6 +189,10 @@ class CascadeRemover implements CascadeRemoverInterface
         foreach ($dependencyMetadatas as $dependencyMetadata) {
             $dependencyDoctrineClassMetadata = $dependencyMetadata->getClassMetadata();
             $dependencyClass = $dependencyDoctrineClassMetadata->getName();
+
+            if (in_array($dependencyClass, $options['excluded_classes'])) {
+                continue;
+            }
 
             $dependencyIdentifiers = $this->getDependencyIdentifiers(
                 $manager,
@@ -175,7 +213,8 @@ class CascadeRemover implements CascadeRemoverInterface
                         $manager,
                         $dependencyDoctrineClassMetadata,
                         array_values($dependencyIdentifiers),
-                        $oneToManyDependencies
+                        $oneToManyDependencies,
+                        $options
                     );
                 }
             } else {
@@ -189,7 +228,8 @@ class CascadeRemover implements CascadeRemoverInterface
                         $manager,
                         $dependencyDoctrineClassMetadata,
                         array_values($addedDependencyIdentifiers),
-                        $oneToManyDependencies
+                        $oneToManyDependencies,
+                        $options
                     );
                 }
             }
