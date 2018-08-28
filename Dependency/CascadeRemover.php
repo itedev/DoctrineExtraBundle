@@ -128,7 +128,8 @@ class CascadeRemover implements CascadeRemoverInterface
         // get dependent many-to-many tables
         $manyToManyTables = $this->getDependencyManyToManyTables(
             $sortedDoctrineClassMetadatas,
-            $oneToManyDependencies
+            $oneToManyDependencies,
+            $options
         );
         // get unidirectional one-to-one entities
         $oneToOneDependencies = $this->getOneToOneDependencies(
@@ -309,10 +310,14 @@ class CascadeRemover implements CascadeRemoverInterface
     /**
      * @param array|DoctrineClassMetadata[] $sortedDoctrineClassMetadatas
      * @param array $oneToManyDependencies
+     * @param array $options
      * @return array
      */
-    protected function getDependencyManyToManyTables(array $sortedDoctrineClassMetadatas, array $oneToManyDependencies)
-    {
+    protected function getDependencyManyToManyTables(
+        array $sortedDoctrineClassMetadatas,
+        array $oneToManyDependencies,
+        array $options = []
+    ) {
         $classes = array_keys($oneToManyDependencies);
         $tables = [];
         foreach ($sortedDoctrineClassMetadatas as $class => $doctrineClassMetadata) {
@@ -320,6 +325,11 @@ class CascadeRemover implements CascadeRemoverInterface
                 if ($associationMapping['isOwningSide']
                     && $associationMapping['type'] === DoctrineClassMetadata::MANY_TO_MANY) {
                     $targetClass = $associationMapping['targetEntity'];
+
+                    if (in_array($class, $options['excluded_classes'])
+                        || in_array($targetClass, $options['excluded_classes'])) {
+                        continue;
+                    }
 
                     $hasClass = in_array($class, $classes);
                     $hasTargetClass = in_array($targetClass, $classes);
