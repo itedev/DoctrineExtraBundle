@@ -98,8 +98,8 @@ class DependencyMapBuilder implements DependencyMapBuilderInterface
 
         return array_filter($dependencyClassMetadatas, function (ClassMetadata $dependencyClassMetadata) {
             /** @var \Doctrine\ORM\Mapping\ClassMetadata $dependencyClassMetadata */
-            return ($dependencyClassMetadata->isInheritanceTypeNone() || !$dependencyClassMetadata->isRootEntity())
-            && !$dependencyClassMetadata->isMappedSuperclass;
+            return $dependencyClassMetadata->isInheritanceTypeNone()
+                || in_array($dependencyClassMetadata->name, $dependencyClassMetadata->discriminatorMap);
         });
     }
 
@@ -198,7 +198,10 @@ class DependencyMapBuilder implements DependencyMapBuilderInterface
                 if (!$this->hasClassMetadata($managerId, $parentClassMetadata->getName())) {
                     $this->addClassMetadata($managerId, $parentClassMetadata);
                 }
-                $this->addDependency($managerId, $classMetadata, $parentClassMetadata);
+
+                if ($classMetadata->isInheritanceTypeJoined()) {
+                    $this->addDependency($managerId, $classMetadata, $parentClassMetadata);
+                }
                 //$this->addDependency($managerId, $parentClassMetadata, $classMetadata);
             }
 

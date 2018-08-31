@@ -152,9 +152,11 @@ class CascadeRemover implements CascadeRemoverInterface
     {
         $resolver->setDefaults([
             'excluded_classes' => [],
+            'identifier_query_builder_modifier' => null,
         ]);
         $resolver->setAllowedTypes([
             'excluded_classes' => 'array',
+            'identifier_query_builder_modifier' => ['null', 'callable'],
         ]);
     }
 
@@ -168,6 +170,36 @@ class CascadeRemover implements CascadeRemoverInterface
         $this->configureOptions($resolver);
 
         return $resolver->resolve($options);
+    }
+
+    /**
+     * @param string $class
+     * @param bool|null $optional
+     * @param bool $recursive
+     */
+    public function getDependentClasses($class, $optional = null, $recursive = false)
+    {
+        $classMetadata = $this->dependencyMetadataFactory->getMetadataFor($class);
+        $dependencyMetadatas = $classMetadata->getDependencies();
+
+        $classes = [];
+        foreach ($dependencyMetadatas as $dependencyMetadata) {
+            $dependencyDoctrineClassMetadata = $dependencyMetadata->getClassMetadata();
+            $dependencyClass = $dependencyDoctrineClassMetadata->getName();
+
+            if (null === $optional || $optional === $dependencyMetadata->isDoctrineNullable()) {
+                if (!array_key_exists($dependencyClass, $classes)) {
+                    $classes[$dependencyClass] = [];
+                }
+                $classes[$dependencyClass][] = $dependencyMetadata;
+
+                if ($recursive) {
+                    $classes = array_merge_recursive($classes, $this->getDependentClasses($dependencyClass, $optional, $recursive));
+                }
+            }
+        }
+
+        return $classes;
     }
 
     /**
@@ -198,7 +230,8 @@ class CascadeRemover implements CascadeRemoverInterface
             $dependencyIdentifiers = $this->getDependencyIdentifiers(
                 $manager,
                 $dependencyMetadata,
-                $identifiers
+                $identifiers,
+                $options
             );
             $dependencyIdentifiers = ArrayUtils::indexByCallable(
                 $dependencyIdentifiers,
@@ -241,12 +274,14 @@ class CascadeRemover implements CascadeRemoverInterface
      * @param EntityManager $manager
      * @param DependencyMetadata $dependencyMetadata
      * @param array $identifiers
+     * @param array $options
      * @return array
      */
     protected function getDependencyIdentifiers(
         EntityManager $manager,
         DependencyMetadata $dependencyMetadata,
-        array $identifiers
+        array $identifiers,
+        array $options = []
     ) {
         $dependencyDoctrineClassMetadata = $dependencyMetadata->getClassMetadata();
         $dependencyClass = $dependencyDoctrineClassMetadata->getName();
@@ -263,13 +298,22 @@ class CascadeRemover implements CascadeRemoverInterface
         $qb
             ->from($dependencyClass, $alias)
         ;
-        foreach ($dependencyAssociationNames as $dependencyAssociationName) {
+        if (!$dependencyDoctrineClassMetadata->isInheritanceTypeNone()) {
             $qb
-                ->orWhere($qb->expr()->in(
-                    $alias . '.' . $dependencyAssociationName,
-                    ':' . $targetIdsParameterName
-                ))
+                ->andWhere(sprintf('%s INSTANCE OF %s', $alias, $dependencyClass))
             ;
+        }
+        $orX = $qb->expr()->orX();
+        foreach ($dependencyAssociationNames as $dependencyAssociationName) {
+            $orX->add($qb->expr()->in(
+                $alias . '.' . $dependencyAssociationName,
+                ':' . $targetIdsParameterName
+            ));
+        }
+        $qb->andWhere($orX);
+
+        if (is_callable($options['identifier_query_builder_modifier'])) {
+            call_user_func_array($options['identifier_query_builder_modifier'], [$dependencyClass, $qb]);
         }
 
         $limit = 5000;

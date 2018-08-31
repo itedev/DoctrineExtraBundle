@@ -106,11 +106,53 @@ class DependencyMetadata
     {
         $associationMappings = [];
         foreach ($this->associationNames as $associationName) {
-            $associationMapping = $this->classMetadata->getAssociationMapping($associationName);
+            $associationMapping = $this->getAssociationMapping($associationName);
             $associationMappings[$associationName] = $associationMapping;
         }
 
         return $associationMappings;
+    }
+
+    /**
+     * @param string $associationName
+     * @return array
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     */
+    public function getAssociationMapping($associationName)
+    {
+        return $this->classMetadata->getAssociationMapping($associationName);
+    }
+
+    /**
+     * @param string $associationName
+     * @return bool
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     */
+    public function isAssociationNullable($associationName)
+    {
+        $associationMapping = $this->getAssociationMapping($associationName);
+        foreach ($associationMapping['joinColumns'] as $joinColumn) {
+            if (!$joinColumn['nullable']) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @return bool
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     */
+    public function isDoctrineNullable()
+    {
+        foreach ($this->associationNames as $associationName) {
+            if (!$this->isAssociationNullable($associationName)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
