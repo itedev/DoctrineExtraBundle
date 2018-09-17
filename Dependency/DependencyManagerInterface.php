@@ -3,11 +3,11 @@
 namespace ITE\DoctrineExtraBundle\Dependency;
 
 /**
- * Interface CascadeRemoverInterface
+ * Interface DependencyManagerInterface
  *
  * @author c1tru55 <mr.c1tru55@gmail.com>
  */
-interface CascadeRemoverInterface
+interface DependencyManagerInterface
 {
     /**
      * @param object $entity

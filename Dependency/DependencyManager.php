@@ -14,11 +14,11 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 /**
- * Class CascadeRemover
+ * Class DependencyManager
  *
  * @author c1tru55 <mr.c1tru55@gmail.com>
  */
-class CascadeRemover implements CascadeRemoverInterface
+class DependencyManager implements DependencyManagerInterface
 {
     /**
      * @var ManagerRegistry $registry
@@ -152,10 +152,12 @@ class CascadeRemover implements CascadeRemoverInterface
     {
         $resolver->setDefaults([
             'excluded_classes' => [],
+            'dependency_association_modifier' => null,
             'identifier_query_builder_modifier' => null,
         ]);
         $resolver->setAllowedTypes([
             'excluded_classes' => 'array',
+            'dependency_association_modifier' => ['null', 'callable'],
             'identifier_query_builder_modifier' => ['null', 'callable'],
         ]);
     }
@@ -289,6 +291,18 @@ class CascadeRemover implements CascadeRemoverInterface
         $dependencyIdentifierFieldNames = $dependencyDoctrineClassMetadata->getIdentifierFieldNames();
         $dependencyAssociationNames = $dependencyMetadata->getAssociationNames();
 
+        if (is_callable($options['dependency_association_modifier'])) {
+            if (null !== $result = call_user_func_array(
+                $options['dependency_association_modifier'],
+                [$dependencyAssociationNames, $dependencyMetadata]
+                )) {
+                $dependencyAssociationNames = $result;
+            }
+        }
+        if (empty($dependencyAssociationNames)) {
+            return [];
+        }
+
         $alias = 'o';
         $targetIdsParameterName = 'targetIds';
         $qb = $manager->createQueryBuilder();
@@ -313,7 +327,9 @@ class CascadeRemover implements CascadeRemoverInterface
         $qb->andWhere($orX);
 
         if (is_callable($options['identifier_query_builder_modifier'])) {
-            call_user_func_array($options['identifier_query_builder_modifier'], [$dependencyClass, $qb]);
+            if (false === call_user_func_array($options['identifier_query_builder_modifier'], [$dependencyMetadata, $qb])) {
+                return [];
+            }
         }
 
         $limit = 5000;
@@ -487,7 +503,7 @@ class CascadeRemover implements CascadeRemoverInterface
         array $relatedClasses,
         array $oneToManyDependencies
     ) {
-        $limit = 5000;
+        $limit = 500;
         $qb = $manager->getConnection()->createQueryBuilder()
             ->delete($table);
 
@@ -548,7 +564,7 @@ class CascadeRemover implements CascadeRemoverInterface
         );
         $this->dispatcher->dispatch(CascadeRemoveEvents::PRE_REMOVE, $event);
 
-        $limit = 5000;
+        $limit = 500;
         $count = count($identifiers);
         $removedCount = 0;
         for ($offset = 0; $offset < $count; $offset += $limit) {
@@ -582,7 +598,7 @@ class CascadeRemover implements CascadeRemoverInterface
     ) {
         $alias = 'o';
         $idsParameter = 'ids';
-        $limit = 5000;
+        $limit = 500;
 
         $qb = $manager->createQueryBuilder();
         $qb
