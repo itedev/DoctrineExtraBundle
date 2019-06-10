@@ -35,6 +35,9 @@ class Configuration implements ConfigurationInterface
                         ->end()
                     ->end()
                 ->end()
+                ->arrayNode('odm')
+                    ->canBeEnabled()
+                ->end()
         ;
 
         // Here you should define the parameters that are allowed to

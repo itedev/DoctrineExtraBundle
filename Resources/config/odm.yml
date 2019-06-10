@@ -1,0 +1,9 @@
+parameters:
+    doctrine_mongodb.odm.hydrator_cache_warmer.overriden.class: ITE\DoctrineExtraBundle\CacheWarmer\DoctrineMongoDBHydratorCacheWarmer
+
+services:
+    doctrine_mongodb.odm.hydrator_cache_warmer.overriden:
+        class: %doctrine_mongodb.odm.hydrator_cache_warmer.overriden.class%
+        arguments: [ @service_container ]
+        tags:
+            - { name: kernel.cache_warmer }

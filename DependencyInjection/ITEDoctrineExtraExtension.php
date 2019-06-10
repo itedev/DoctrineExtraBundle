@@ -29,11 +29,16 @@ class ITEDoctrineExtraExtension extends Extension
         $loader->load('dependency.yml');
 
         $container->setParameter('ite_doctrine_extra.proxy_entity_manager.enabled', $config['proxy_entity_manager']['enabled']);
+        $container->setParameter('ite_doctrine_extra.odm.enabled', $config['odm']['enabled']);
 
         if (true === $config['proxy_entity_manager']['enabled']) {
             $loader->load('proxy.yml');
             $container->setParameter('ite_doctrine_extra.proxy_entity_manager.prefix_interceptors', $config['proxy_entity_manager']['prefix_interceptors']);
             $container->setParameter('ite_doctrine_extra.proxy_entity_manager.suffix_interceptors', $config['proxy_entity_manager']['suffix_interceptors']);
+        }
+
+        if (true === $config['odm']['enabled']) {
+            $loader->load('odm.yml');
         }
     }
 }
