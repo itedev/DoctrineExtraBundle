@@ -4,6 +4,7 @@ namespace ITE\DoctrineExtraBundle;
 
 use Doctrine\ODM\MongoDB\Types\Type;
 use ITE\Common\Util\ReflectionUtils;
+use ITE\DoctrineExtraBundle\DependencyInjection\Compiler\ORMTypePass;
 use ITE\DoctrineExtraBundle\DependencyInjection\Compiler\ProxyPass;
 use ITE\DoctrineExtraBundle\Doctrine\ODM\MongoDB\ContainerAwareRepositoryFactory;
 use ITE\DoctrineExtraBundle\Doctrine\ODM\MongoDB\Hydrator\HydratorFactory;

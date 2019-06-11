@@ -1,5 +1,8 @@
 parameters:
     doctrine_mongodb.odm.hydrator_cache_warmer.overriden.class: ITE\DoctrineExtraBundle\CacheWarmer\DoctrineMongoDBHydratorCacheWarmer
+    ite.doctrine_extra.odm.mapping.class_metadata_mapping_loader.class: ITE\DoctrineExtraBundle\Doctrine\ODM\MongoDB\Mapping\ClassMetadataMappingLoader
+    ite.doctrine_extra.odm.mapping.cache_warmer.class: ITE\DoctrineExtraBundle\CacheWarmer\DoctrineMongoDBMappingCacheWarmer
+    ite.doctrine_extra.odm.event_subscrber.orm_type.class: ITE\DoctrineExtraBundle\Doctrine\ODM\MongoDB\EventListener\ORMTypeEventSubscriber
 
 services:
     doctrine_mongodb.odm.hydrator_cache_warmer.overriden:
@@ -7,3 +10,22 @@ services:
         arguments: [ @service_container ]
         tags:
             - { name: kernel.cache_warmer }
+
+
+    ite.doctrine_extra.odm.mapping.class_metadata_mapping_loader:
+        class: %ite.doctrine_extra.odm.mapping.class_metadata_mapping_loader.class%
+        arguments: [ @doctrine_mongodb.odm.document_manager, %kernel.cache_dir% ]
+
+    ite.doctrine_extra.odm.mapping.cache_warmer:
+        class: %ite.doctrine_extra.odm.mapping.cache_warmer.class%
+        arguments: [ @ite.doctrine_extra.odm.mapping.class_metadata_mapping_loader ]
+        tags:
+            - { name: kernel.cache_warmer }
+
+    ite.doctrine_extra.odm.event_subscrber.orm_type:
+        class: %ite.doctrine_extra.odm.event_subscrber.orm_type.class%
+        arguments:
+            - @ite.doctrine_extra.odm.mapping.class_metadata_mapping_loader
+            - @doctrine_mongodb.odm.document_manager
+        tags:
+            - { name: doctrine.event_subscriber }
