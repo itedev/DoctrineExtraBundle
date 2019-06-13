@@ -226,6 +226,16 @@ class PersistenceBuilder extends BasePersistenceBuilder
             if (is_string($el)) {
                 $el = str_replace("\0", '', $el);
             }
+
+            if ($el instanceof \stdClass) {
+                $el = (array) $el;
+
+                array_walk_recursive($el, function (&$item) {
+                    if (is_string($item)) {
+                        $item = str_replace("\0", '', $item);
+                    }
+                });
+            }
         });
 
         return ArrayUtils::arrayMapKeyRecursive(function ($key) {
