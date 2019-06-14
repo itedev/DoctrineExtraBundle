@@ -7,6 +7,7 @@ use Doctrine\ODM\MongoDB\Mapping\ClassMetadataInfo;
 use Doctrine\ODM\MongoDB\Persisters\PersistenceBuilder as BasePersistenceBuilder;
 use Doctrine\ODM\MongoDB\Types\Type;
 use Doctrine\ODM\MongoDB\UnitOfWork;
+use ITE\Common\Util\ArrayUtils;
 use ITE\DoctrineExtraBundle\Doctrine\ODM\MongoDB\Types\MappingAwareType;
 
 class PersistenceBuilder extends BasePersistenceBuilder
@@ -66,7 +67,7 @@ class PersistenceBuilder extends BasePersistenceBuilder
         }
 
 
-        return $insertData;
+        return $this->escapeNullCharacter($insertData);
     }
 
     /**
@@ -119,7 +120,7 @@ class PersistenceBuilder extends BasePersistenceBuilder
             }
         }
 
-        return $updateData;
+        return $this->escapeNullCharacter($updateData);
     }
 
     /**
@@ -163,7 +164,7 @@ class PersistenceBuilder extends BasePersistenceBuilder
             }
         }
 
-        return $updateData;
+        return $this->escapeNullCharacter($updateData);
     }
 
     public function prepareEmbeddedDocumentValue(
@@ -211,7 +212,38 @@ class PersistenceBuilder extends BasePersistenceBuilder
             $embeddedDocumentValue[$mapping['name']] = $value;
         }
 
-        return $embeddedDocumentValue;
+        return $this->escapeNullCharacter($embeddedDocumentValue);
     }
 
+    /**
+     * @param array $data
+     *
+     * @return array
+     */
+    protected function escapeNullCharacter(array $data)
+    {
+        array_walk_recursive($data, function (&$el) {
+            if (is_string($el)) {
+                $el = str_replace("\0", '', $el);
+            }
+
+            if ($el instanceof \stdClass) {
+                $el = (array) $el;
+
+                array_walk_recursive($el, function (&$item) {
+                    if (is_string($item)) {
+                        $item = str_replace("\0", '', $item);
+                    }
+                });
+            }
+        });
+
+        return ArrayUtils::arrayMapKeyRecursive(function ($key) {
+            if (is_string($key)) {
+                return str_replace("\0", '', $key);
+            }
+
+            return $key;
+        }, $data);
+    }
 }
