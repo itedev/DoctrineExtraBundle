@@ -68,8 +68,8 @@ class ORMTypeEventSubscriber implements EventSubscriber
 
                 $changed = false;
 
-                foreach ($additionalFields as $field) {
-                    if ($eventArgs->hasChangedField($field)) {
+                foreach ($additionalFields as $additionalField) {
+                    if ($eventArgs->hasChangedField($additionalField)) {
                         $changed = true;
                     }
                 }

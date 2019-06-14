@@ -119,7 +119,7 @@ class ClassMetadataMappingLoader
                 if (!isset($mappings[$options['class']])) {
                     $mappings[$options['class']] = [];
                 }
-                if (!isset($options['class'][$metadata->name])) {
+                if (!isset($mappings[$options['class']][$metadata->name])) {
                     $mappings[$options['class']][$metadata->name] = [];
                 }
 
