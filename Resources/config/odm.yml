@@ -27,5 +27,3 @@ services:
         arguments:
             - @ite.doctrine_extra.odm.mapping.class_metadata_mapping_loader
             - @doctrine_mongodb.odm.document_manager
-        tags:
-            - { name: doctrine.event_subscriber }

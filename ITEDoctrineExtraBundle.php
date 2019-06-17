@@ -4,6 +4,7 @@ namespace ITE\DoctrineExtraBundle;
 
 use Doctrine\ODM\MongoDB\Types\Type;
 use ITE\Common\Util\ReflectionUtils;
+use ITE\DoctrineExtraBundle\DependencyInjection\Compiler\ODMPass;
 use ITE\DoctrineExtraBundle\DependencyInjection\Compiler\ORMTypePass;
 use ITE\DoctrineExtraBundle\DependencyInjection\Compiler\ProxyPass;
 use ITE\DoctrineExtraBundle\Doctrine\ODM\MongoDB\ContainerAwareRepositoryFactory;
@@ -68,5 +69,6 @@ class ITEDoctrineExtraBundle extends Bundle
     public function build(ContainerBuilder $container)
     {
         $container->addCompilerPass(new ProxyPass());
+        $container->addCompilerPass(new ODMPass());
     }
 }

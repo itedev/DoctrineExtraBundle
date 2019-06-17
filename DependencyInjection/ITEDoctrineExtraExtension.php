@@ -30,6 +30,7 @@ class ITEDoctrineExtraExtension extends Extension
 
         $container->setParameter('ite_doctrine_extra.proxy_entity_manager.enabled', $config['proxy_entity_manager']['enabled']);
         $container->setParameter('ite_doctrine_extra.odm.enabled', $config['odm']['enabled']);
+        $container->setParameter('ite_doctrine_extra.odm.orm_field_subscriber_enabled', $config['odm']['orm_field_subscriber_enabled']);
 
         if (true === $config['proxy_entity_manager']['enabled']) {
             $loader->load('proxy.yml');

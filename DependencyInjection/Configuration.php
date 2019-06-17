@@ -37,6 +37,9 @@ class Configuration implements ConfigurationInterface
                 ->end()
                 ->arrayNode('odm')
                     ->canBeEnabled()
+                    ->children()
+                        ->booleanNode('orm_field_subscriber_enabled')->defaultValue(true)
+                    ->end()
                 ->end()
         ;
 
