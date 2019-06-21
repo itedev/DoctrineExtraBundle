@@ -140,7 +140,7 @@ class HydratorFactory extends BaseHydratorFactory
                 case Configuration::AUTOGENERATE_EVAL:
                     $this->generateHydratorClass($class, $hydratorClassName, false);
                     break;
-                case self::AUTOGENREATE_IF_CHANGED:
+                case self::AUTOGENERATE_IF_CHANGED:
                     if (!file_exists($fileName)) {
                         $this->generateHydratorClass($class, $hydratorClassName, $fileName);
                     }
