@@ -13,6 +13,7 @@ use Doctrine\ODM\MongoDB\Hydrator\HydratorFactory as BaseHydratorFactory;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
 use Doctrine\ODM\MongoDB\Proxy\Proxy;
 use Doctrine\ODM\MongoDB\Types\Type;
+use Doctrine\ODM\MongoDB\UnitOfWork;
 
 /**
  * Class HydratorFactory
@@ -90,6 +91,16 @@ class HydratorFactory extends BaseHydratorFactory
         $this->hydratorDir = $hydratorDir;
         $this->hydratorNamespace = $hydratorNs;
         $this->autoGenerate = $autoGenerate;
+    }
+
+    /**
+     * Sets the UnitOfWork instance.
+     *
+     * @param UnitOfWork $uow
+     */
+    public function setUnitOfWork(UnitOfWork $uow)
+    {
+        $this->unitOfWork = $uow;
     }
 
     public function generateHydratorClasses(array $classes, $toDir = null)

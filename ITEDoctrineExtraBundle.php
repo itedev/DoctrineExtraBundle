@@ -57,6 +57,7 @@ class ITEDoctrineExtraBundle extends Bundle
             );
             ReflectionUtils::setValue($dm, 'hydratorFactory', $hydratorFactory);
             ReflectionUtils::setValue($uow, 'hydratorFactory', $hydratorFactory);
+            $hydratorFactory->setUnitOfWork($uow);
             $persistenceBuilder = new PersistenceBuilder($dm, $uow);
             ReflectionUtils::setValue($uow, 'persistenceBuilder', $persistenceBuilder);
         }
