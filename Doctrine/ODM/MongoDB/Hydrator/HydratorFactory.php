@@ -5,9 +5,13 @@ namespace ITE\DoctrineExtraBundle\Doctrine\ODM\MongoDB\Hydrator;
 use Doctrine\Common\EventManager;
 use Doctrine\ODM\MongoDB\Configuration;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Doctrine\ODM\MongoDB\Event\LifecycleEventArgs;
+use Doctrine\ODM\MongoDB\Event\PreLoadEventArgs;
+use Doctrine\ODM\MongoDB\Events;
 use Doctrine\ODM\MongoDB\Hydrator\HydratorException;
 use Doctrine\ODM\MongoDB\Hydrator\HydratorFactory as BaseHydratorFactory;
 use Doctrine\ODM\MongoDB\Mapping\ClassMetadata;
+use Doctrine\ODM\MongoDB\Proxy\Proxy;
 use Doctrine\ODM\MongoDB\Types\Type;
 
 /**
@@ -17,6 +21,8 @@ use Doctrine\ODM\MongoDB\Types\Type;
  */
 class HydratorFactory extends BaseHydratorFactory
 {
+    const AUTOGENERATE_IF_CHANGED = 4;
+
     /**
      * The namespace that contains all hydrator classes.
      *
@@ -71,6 +77,8 @@ class HydratorFactory extends BaseHydratorFactory
      */
     public function __construct(DocumentManager $dm, EventManager $evm, $hydratorDir, $hydratorNs, $autoGenerate)
     {
+        parent::__construct($dm, $evm, $hydratorDir, $hydratorNs, $autoGenerate);
+
         if ( ! $hydratorDir) {
             throw HydratorException::hydratorDirectoryRequired();
         }
@@ -131,6 +139,20 @@ class HydratorFactory extends BaseHydratorFactory
 
                 case Configuration::AUTOGENERATE_EVAL:
                     $this->generateHydratorClass($class, $hydratorClassName, false);
+                    break;
+                case self::AUTOGENREATE_IF_CHANGED:
+                    if (!file_exists($fileName)) {
+                        $this->generateHydratorClass($class, $hydratorClassName, $fileName);
+                    }
+
+                    $refl = new \ReflectionClass($className);
+                    $documentModificationTime = filemtime($refl->getFileName());
+                    $hydratorModificationTime = filemtime($fileName);
+
+                    if ($documentModificationTime > $hydratorModificationTime) {
+                        $this->generateHydratorClass($class, $hydratorClassName, $fileName);
+                    }
+                    require $fileName;
                     break;
             }
         }
@@ -374,5 +396,59 @@ EOF
             rename($tmpFileName, $fileName);
             chmod($fileName, 0664);
         }
+    }
+
+    public function hydrate($document, $data, array $hints = array())
+    {
+        $metadata = $this->dm->getClassMetadata(get_class($document));
+        // Invoke preLoad lifecycle events and listeners
+        if ( ! empty($metadata->lifecycleCallbacks[Events::preLoad])) {
+            $args = array(new PreLoadEventArgs($document, $this->dm, $data));
+            $metadata->invokeLifecycleCallbacks(Events::preLoad, $document, $args);
+        }
+        if ($this->evm->hasListeners(Events::preLoad)) {
+            $this->evm->dispatchEvent(Events::preLoad, new PreLoadEventArgs($document, $this->dm, $data));
+        }
+
+        // alsoLoadMethods may transform the document before hydration
+        if ( ! empty($metadata->alsoLoadMethods)) {
+            foreach ($metadata->alsoLoadMethods as $method => $fieldNames) {
+                foreach ($fieldNames as $fieldName) {
+                    // Invoke the method only once for the first field we find
+                    if (array_key_exists($fieldName, $data)) {
+                        $document->$method($data[$fieldName]);
+                        continue 2;
+                    }
+                }
+            }
+        }
+
+        if ($document instanceof Proxy) {
+            $document->__isInitialized__ = true;
+            $document->__setInitializer(null);
+            $document->__setCloner(null);
+        }
+
+        $data = $this->getHydratorFor($metadata->name)->hydrate($document, $data, $hints);
+
+        if ($document instanceof Proxy) {
+            // lazy properties may be left uninitialized
+            $properties = $document->__getLazyProperties();
+            foreach ($properties as $propertyName => $property) {
+                if ( ! isset($document->$propertyName)) {
+                    $document->$propertyName = $properties[$propertyName];
+                }
+            }
+        }
+
+        // Invoke the postLoad lifecycle callbacks and listeners
+        if ( ! empty($metadata->lifecycleCallbacks[Events::postLoad])) {
+            $metadata->invokeLifecycleCallbacks(Events::postLoad, $document, array(new LifecycleEventArgs($document, $this->dm)));
+        }
+        if ($this->evm->hasListeners(Events::postLoad)) {
+            $this->evm->dispatchEvent(Events::postLoad, new LifecycleEventArgs($document, $this->dm));
+        }
+
+        return $data;
     }
 }
