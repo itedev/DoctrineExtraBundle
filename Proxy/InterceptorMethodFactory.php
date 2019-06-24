@@ -36,9 +36,9 @@ class InterceptorMethodFactory
         $methods = $container->getParameter('ite_doctrine_extra.proxy_entity_manager.prefix_interceptors');
 
         foreach ($methods as &$interceptors) {
-            $interceptors = function ($proxy, $em, $method, $parameters, $returnEarly) use ($container, $interceptors) {
+            $interceptors = function ($proxy, $em, $method, $parameters, &$returnEarly) use ($container, $interceptors) {
                 foreach ($interceptors as $interceptor) {
-                    $returnValue = call_user_func($interceptor, $proxy, $em, $method, $parameters, $returnEarly, $container);
+                    $returnValue = call_user_func_array($interceptor, [$proxy, $em, $method, $parameters, &$returnEarly, $container]);
 
                     if ($returnEarly) {
                         return $returnValue;
@@ -60,9 +60,9 @@ class InterceptorMethodFactory
         $methods = $container->getParameter('ite_doctrine_extra.proxy_entity_manager.suffix_interceptors');
 
         foreach ($methods as &$interceptors) {
-            $interceptors = function ($proxy, $em, $method, $parameters, $returnValue, $returnEarly) use ($container, $interceptors) {
+            $interceptors = function ($proxy, $em, $method, $parameters, $returnValue, &$returnEarly) use ($container, $interceptors) {
                 foreach ($interceptors as $interceptor) {
-                    $returnValue = call_user_func($interceptor, $proxy, $em, $method, $parameters, $returnValue, $returnEarly, $container);
+                    $returnValue = call_user_func_array($interceptor, [$proxy, $em, $method, $parameters, $returnValue, &$returnEarly, $container]);
 
                     if ($returnEarly) {
                         return $returnValue;
