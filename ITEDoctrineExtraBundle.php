@@ -39,6 +39,12 @@ class ITEDoctrineExtraBundle extends Bundle
         }
 
         if ($this->container->getParameter('ite_doctrine_extra.odm.enabled')) {
+            try {
+                $em = $this->container->get('doctrine.orm.default_entity_manager');
+            } catch (\Throwable $ex) {
+                return;
+            }
+
             Type::registerType('orm', ORMType::class);
             Type::getType('orm')->setEm($this->container->get('doctrine.orm.default_entity_manager'));
 
