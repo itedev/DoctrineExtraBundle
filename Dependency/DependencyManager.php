@@ -110,32 +110,33 @@ class DependencyManager implements DependencyManagerInterface
         $identifiers = [
             serialize($identifier) => $identifier,
         ];
-        $oneToManyDependencies = [
-            $class => $identifiers,
-        ];
-        $this->addDependencyIdentifiersRecursive(
+        $sortedDoctrineClassMetadatas = $this->dependencyMapBuilder->getSortedClassMetadatas($manager);
+
+        $oneToManyDependencies = [];
+        $oneToOneDependencies = [];
+        $this->findDependenciesRecursive(
             $manager,
-            $doctrineClassMetadata,
-            array_values($identifiers),
+            $sortedDoctrineClassMetadatas,
+            [
+                $class => $identifiers,
+            ],
             $oneToManyDependencies,
+            $oneToOneDependencies,
+            true,
             $options
         );
-        $sortedDoctrineClassMetadatas = $this->dependencyMapBuilder->getSortedClassMetadatas($manager);
-        $oneToManyDependencies = $this->sortOneToManyDependencies(
+        $oneToManyDependencies = $this->sortDependencies(
             $sortedDoctrineClassMetadatas,
             $oneToManyDependencies
         );
-        // get dependent many-to-many tables
+        $oneToOneDependencies = $this->sortDependencies(
+            $sortedDoctrineClassMetadatas,
+            $oneToOneDependencies
+        );
         $manyToManyTables = $this->getDependencyManyToManyTables(
             $sortedDoctrineClassMetadatas,
             $oneToManyDependencies,
             $options
-        );
-        // get unidirectional one-to-one entities
-        $oneToOneDependencies = $this->getOneToOneDependencies(
-            $manager,
-            $sortedDoctrineClassMetadatas,
-            $oneToManyDependencies
         );
 
         return [
@@ -143,6 +144,65 @@ class DependencyManager implements DependencyManagerInterface
             'many-to-many' => $manyToManyTables,
             'one-to-one' => $oneToOneDependencies,
         ];
+    }
+
+    /**
+     * @param EntityManager $manager
+     * @param array $sortedDoctrineClassMetadatas
+     * @param array $dependencies
+     * @param array $globalOneToManyDependencies
+     * @param array $globalOneToOneDependencies
+     * @param bool $root
+     * @param array $options
+     */
+    protected function findDependenciesRecursive(
+        EntityManager $manager,
+        array $sortedDoctrineClassMetadatas,
+        array $dependencies = [],
+        array &$globalOneToManyDependencies = [],
+        array &$globalOneToOneDependencies = [],
+        $root = false,
+        array $options = []
+    ) {
+        $oneToManyDependencies = $root ? $dependencies : [];
+        foreach ($dependencies as $class => $identifiers) {
+            $doctrineClassMetadata = $sortedDoctrineClassMetadatas[$class];
+
+            $this->addDependencyIdentifiersRecursive(
+                $manager,
+                $doctrineClassMetadata,
+                array_values($identifiers),
+                $oneToManyDependencies,
+                $options
+            );
+        }
+
+        $oneToManyDependencies = $this->sortDependencies(
+            $sortedDoctrineClassMetadatas,
+            $oneToManyDependencies
+        );
+        $oneToOneDependencies = $this->getOneToOneDependencies(
+            $manager,
+            $sortedDoctrineClassMetadatas,
+            $oneToManyDependencies
+        );
+
+        $globalOneToManyDependencies = array_merge($globalOneToManyDependencies, $oneToManyDependencies);
+        $globalOneToOneDependencies = array_merge($globalOneToOneDependencies, $oneToOneDependencies);
+
+        $options['excluded_classes'] = array_unique(array_merge($options['excluded_classes'], array_keys($oneToManyDependencies)));
+
+        if (!empty($oneToManyDependencies)) {
+            $this->findDependenciesRecursive(
+                $manager,
+                $sortedDoctrineClassMetadatas,
+                $oneToOneDependencies,
+                $globalOneToManyDependencies,
+                $globalOneToOneDependencies,
+                false, // no root
+                $options
+            );
+        }
     }
 
     /**
@@ -293,8 +353,8 @@ class DependencyManager implements DependencyManagerInterface
 
         if (is_callable($options['dependency_association_modifier'])) {
             if (null !== $result = call_user_func_array(
-                $options['dependency_association_modifier'],
-                [$dependencyAssociationNames, $dependencyMetadata]
+                    $options['dependency_association_modifier'],
+                    [$dependencyAssociationNames, $dependencyMetadata]
                 )) {
                 $dependencyAssociationNames = $result;
             }
@@ -352,19 +412,19 @@ class DependencyManager implements DependencyManagerInterface
 
     /**
      * @param array|DoctrineClassMetadata[] $sortedDoctrineClassMetadatas
-     * @param array $oneToManyDependencies
+     * @param array $dependencies
      * @return array
      */
-    protected function sortOneToManyDependencies(array $sortedDoctrineClassMetadatas, array $oneToManyDependencies)
+    protected function sortDependencies(array $sortedDoctrineClassMetadatas, array $dependencies)
     {
-        $sortedOneToManyDependencies = [];
+        $sortedDependencies = [];
         foreach ($sortedDoctrineClassMetadatas as $dependencyClass => $dependencyDoctrineClassMetadata) {
-            if (isset($oneToManyDependencies[$dependencyClass]) && !empty($oneToManyDependencies[$dependencyClass])) {
-                $sortedOneToManyDependencies[$dependencyClass] = array_values($oneToManyDependencies[$dependencyClass]);
+            if (isset($dependencies[$dependencyClass]) && !empty($dependencies[$dependencyClass])) {
+                $sortedDependencies[$dependencyClass] = array_values($dependencies[$dependencyClass]);
             }
         }
 
-        return $sortedOneToManyDependencies;
+        return $sortedDependencies;
     }
 
     /**
